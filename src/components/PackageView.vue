@@ -97,6 +97,31 @@ const LEGEND_LABELS: Record<string, string> = {
   special: '特殊引脚',
   selected: '选中',
 }
+
+const DEBUG_ALIASES = ['SWDIO', 'SWCLK', 'JTDO', 'NJTRST', 'JTDI']
+
+function truncate(s: string): string {
+  return s.length > 8 ? `${s.slice(0, 7)}…` : s
+}
+
+function defaultLabel(pin: PinDef): string {
+  if (pin.special === 'swd') {
+    const hit = (pin.aliases ?? []).find((a) => DEBUG_ALIASES.includes(a))
+    if (hit) return hit
+  }
+  const alias = pin.aliases?.[0]
+  if (alias && alias !== pin.name) return alias
+  return pin.name
+}
+
+// 引脚内侧标签：已配置的标签名，或特殊引脚的默认标签（仅显示，不参与生成）
+function displayLabel(pin: PinDef): string | undefined {
+  if (pin.type === 'POWER' || pin.type === 'NC') return undefined
+  const assignment = store.assignments[pin.name]
+  if (assignment) return truncate(assignment.label || pin.name)
+  if (pin.special) return truncate(defaultLabel(pin))
+  return undefined
+}
 </script>
 
 <template>
@@ -169,7 +194,7 @@ const LEGEND_LABELS: Record<string, string> = {
             :y="item.g.y + item.g.h / 2 + 3"
             text-anchor="middle"
             font-size="9"
-            fill="#374151"
+            :fill="item.pin.type === 'POWER' ? '#ffffff' : '#374151'"
           >
             {{ item.pin.number }}
           </text>
@@ -181,6 +206,16 @@ const LEGEND_LABELS: Record<string, string> = {
             fill="#1f2329"
           >
             {{ item.pin.name }}
+          </text>
+          <text
+            v-if="displayLabel(item.pin) && displayLabel(item.pin) !== item.pin.name"
+            :x="item.g.innerX"
+            :y="item.g.innerY"
+            :text-anchor="item.g.innerAnchor"
+            font-size="7"
+            fill="#455a64"
+          >
+            {{ displayLabel(item.pin) }}
           </text>
         </g>
       </svg>

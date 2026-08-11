@@ -29,6 +29,9 @@ export interface PinGeometry {
   labelX: number
   labelY: number
   anchor: 'start' | 'end' | 'middle'
+  innerX: number
+  innerY: number
+  innerAnchor: 'start' | 'end' | 'middle'
   rotate?: boolean
 }
 
@@ -50,6 +53,9 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
       labelX: x,
       labelY: geo.margin - PAD_LEN - 8,
       anchor: 'middle',
+      innerX: x,
+      innerY: geo.margin + 12,
+      innerAnchor: 'middle',
     }
   }
   if (side === 'right') {
@@ -62,6 +68,9 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
       labelX: geo.margin + geo.body + PAD_LEN + 6,
       labelY: y + 4,
       anchor: 'start',
+      innerX: geo.margin + geo.body - 8,
+      innerY: y + 4,
+      innerAnchor: 'end',
     }
   }
   if (side === 'bottom') {
@@ -74,6 +83,9 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
       labelX: x,
       labelY: geo.margin + geo.body + PAD_LEN + 16,
       anchor: 'middle',
+      innerX: x,
+      innerY: geo.margin + geo.body - 10,
+      innerAnchor: 'middle',
     }
   }
   // left: pins run bottom -> top
@@ -86,6 +98,9 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
     labelX: geo.margin - PAD_LEN - 6,
     labelY: y + 4,
     anchor: 'end',
+    innerX: geo.margin + 8,
+    innerY: y + 4,
+    innerAnchor: 'start',
   }
 }
 
@@ -105,7 +120,7 @@ export const PIN_COLORS: Record<PinState, { fill: string; stroke: string }> = {
   input: { fill: '#2196f3', stroke: '#1565c0' },
   exti: { fill: '#ff9800', stroke: '#e65100' },
   conflict: { fill: '#f44336', stroke: '#b71c1c' },
-  power: { fill: '#cfd8dc', stroke: '#78909c' },
+  power: { fill: '#546e7a', stroke: '#263238' },
   special: { fill: '#fff3c4', stroke: '#b8860b' },
   selected: { fill: '#7c4dff', stroke: '#4527a0' },
 }
