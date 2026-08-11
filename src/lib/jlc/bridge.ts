@@ -4,6 +4,8 @@ import type {
   EdaProjectInfo,
   EdaWindow,
   McuPinMap,
+  SyncAction,
+  SyncResult,
 } from './types'
 import { resolveModelName } from './import'
 
@@ -173,22 +175,63 @@ for (const w of wires || []) {
   for (let i = 0; i < line.length; i += 2) pts.push([line[i], line[i + 1]]);
   wireList.push({ net, pts });
 }
+const portComps = await eda.sch_PrimitiveComponent.getAll(undefined, false);
+const portList = [];
+for (const c of portComps || []) {
+  let symbolName = '';
+  try { const s = await c.getState_Symbol(); symbolName = (s && s.name) || ''; } catch {}
+  if (!/netport|netflag|power|ground|voltage|^vcc|^vdd|^vss/i.test(symbolName)) continue;
+  let other = {};
+  try { other = (await c.getState_OtherProperty()) || {}; } catch {}
+  let portPins = [];
+  try { portPins = (await eda.sch_PrimitiveComponent.getAllPinsByPrimitiveId(c.primitiveId)) || []; } catch { continue; }
+  for (const p of portPins) {
+    let px = 0;
+    let py = 0;
+    try { px = await p.getState_X(); } catch {}
+    try { py = await p.getState_Y(); } catch {}
+    portList.push({ id: c.primitiveId, x: px, y: py, net: other['Global Net Name'] || other['Net'] || '' });
+  }
+}
 const result = [];
 for (const p of pins || []) {
   const num = await p.getState_PinNumber();
   const name = await p.getState_PinName();
   const x = await p.getState_X();
   const y = await p.getState_Y();
-  const nets = new Set();
-  for (const w of wireList) {
-    for (const pt of w.pts) {
-      if (Math.abs(pt[0] - x) < 1e-6 && Math.abs(pt[1] - y) < 1e-6) {
-        nets.add(w.net);
-        break;
-      }
+  let conn = 'none';
+  let portId = null;
+  let portNet = null;
+  for (const pt of portList) {
+    if (Math.abs(pt.x - x) < 1e-6 && Math.abs(pt.y - y) < 1e-6) {
+      conn = 'port';
+      portId = pt.id;
+      portNet = pt.net || null;
+      break;
     }
   }
-  result.push({ number: num, name, x, y, net: nets.size ? [...nets].join('|') : null });
+  const nets = new Set();
+  if (conn === 'none') {
+    for (const w of wireList) {
+      for (const pt of w.pts) {
+        if (Math.abs(pt[0] - x) < 1e-6 && Math.abs(pt[1] - y) < 1e-6) {
+          nets.add(w.net);
+          break;
+        }
+      }
+    }
+    if (nets.size) conn = 'wire';
+  }
+  result.push({
+    number: num,
+    name,
+    x,
+    y,
+    net: conn === 'port' ? portNet : nets.size ? [...nets].join('|') : null,
+    conn,
+    portId,
+    portNet,
+  });
 }
 return { componentId: '${primitiveId}', designator, symbolName, name: nameAttr, componentName, pins: result };`
   const map = await execute<Omit<McuPinMap, 'modelName'> & { name: string; componentName: string }>(
@@ -207,26 +250,66 @@ return { componentId: '${primitiveId}', designator, symbolName, name: nameAttr, 
 }
 
 /**
- * 在引脚旁放置网络端口标签：输入端 IN、输出端 OUT，网络名 = 标签。
- * 不改动已有导线/线段；未连线引脚放置标签后即获得该网络名。
+ * 按引脚连接方式执行同步：
+ * - update-port：更新已连接网络端口的网络名（Global Net Name / 名称）
+ * - rename-wire：改线段网络（同网络全部导线 NET 属性）
+ * - place-port：在引脚旁新增网络端口（输入端 IN、输出端 OUT）
  */
-export async function applyNetPorts(
+export async function applySyncActions(
   port: number,
-  ports: { net: string; direction: 'IN' | 'OUT'; x: number; y: number }[],
+  actions: SyncAction[],
   windowId?: string,
-): Promise<number> {
-  if (ports.length === 0) return 0
+): Promise<SyncResult> {
+  if (actions.length === 0) return { updated: 0, renamed: 0, placed: 0, failed: [] }
   const code = `
-const ports = ${JSON.stringify(ports)};
-let count = 0;
-for (const p of ports) {
+const actions = ${JSON.stringify(actions)};
+let updated = 0;
+let renamed = 0;
+let placed = 0;
+const failures = [];
+for (const a of actions.filter((x) => x.action === 'update-port')) {
   try {
-    await eda.sch_PrimitiveComponent.createNetPort(p.direction, p.net, p.x, p.y, 0, false);
-    count++;
+    const c = await eda.sch_PrimitiveComponent.get(a.portId);
+    let other = {};
+    try { other = (await c.getState_OtherProperty()) || {}; } catch {}
+    const merged = Object.assign({}, other, { 'Global Net Name': a.net });
+    try {
+      await eda.sch_PrimitiveComponent.modify(a.portId, { name: a.net, otherProperty: merged });
+    } catch {
+      await eda.sch_PrimitiveComponent.modify(a.portId, { otherProperty: merged });
+    }
+    updated++;
   } catch (err) {
-    console.error('[JLC] createNetPort failed:', err && err.message);
+    failures.push('更新端口 ' + a.net + ': ' + (err && err.message));
   }
 }
-return count;`
-  return execute<number>(port, code, windowId)
+const wires = await eda.sch_PrimitiveWire.getAll();
+const byNet = {};
+for (const w of wires || []) {
+  let net = null;
+  try { net = await w.getState_Net(); } catch {}
+  if (!net) continue;
+  (byNet[net] = byNet[net] || []).push(w);
+}
+for (const a of actions.filter((x) => x.action === 'rename-wire')) {
+  const list = byNet[a.oldNet] || [];
+  for (const w of list) {
+    try {
+      const aw = w.toAsync ? w.toAsync() : w;
+      aw.setState_Net(a.net);
+      await aw.done();
+      renamed++;
+    } catch {}
+  }
+}
+for (const a of actions.filter((x) => x.action === 'place-port')) {
+  try {
+    await eda.sch_PrimitiveComponent.createNetPort(a.direction, a.net, a.x, a.y, 0, false);
+    placed++;
+  } catch (err) {
+    failures.push('新增端口 ' + a.net + ': ' + (err && err.message));
+  }
+}
+return { updated, renamed, placed, failures };`
+  return execute<SyncResult>(port, code, windowId)
 }

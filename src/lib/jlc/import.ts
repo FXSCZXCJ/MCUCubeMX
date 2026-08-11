@@ -185,9 +185,10 @@ export function buildImportDiff(
 
 /**
  * 构建“导出到 EDA”计划：把工程里带标签的引脚同步为原理图网络名。
- * 采用“放置网络端口标签”的方式（不改导线/线段）：
- * - 输入端放置 IN 网络端口，输出端放置 OUT 网络端口，网络名 = 标签
- * - 未连线的引脚也会放置标签（标签即网络名），已连线且同名则无需改动
+ * 按引脚现有连接方式选择同步动作：
+ * - 已连接网络端口 → 更新该端口（改 Global Net Name / 名称）
+ * - 线段连接 → 改线段网络（导线 NET 属性）
+ * - 未连接 → 新增网络端口（输入端 IN、输出端 OUT）
  * - 特殊引脚、无标签、EDA 中找不到的引脚跳过
  */
 export function buildExportPlan(
@@ -250,6 +251,32 @@ export function buildExportPlan(
       continue
     }
     const oldNet = edaPin.net
+    const conn = edaPin.conn ?? (oldNet ? 'wire' : 'none')
+
+    if (conn === 'port') {
+      if (edaPin.portNet === assignment.label) {
+        items.push({
+          pin: assignment.pin,
+          edaName: edaPin.name,
+          oldNet: edaPin.portNet,
+          newNet: assignment.label,
+          status: 'keep',
+        })
+        continue
+      }
+      items.push({
+        pin: assignment.pin,
+        edaName: edaPin.name,
+        oldNet: edaPin.portNet ?? null,
+        newNet: assignment.label,
+        status: 'change',
+        action: 'update-port',
+        portId: edaPin.portId,
+        mode: assignment.mode,
+      })
+      continue
+    }
+
     if (oldNet === assignment.label) {
       items.push({
         pin: assignment.pin,
@@ -260,12 +287,14 @@ export function buildExportPlan(
       })
       continue
     }
+    const action = conn === 'wire' || oldNet ? 'rename-wire' : 'place-port'
     items.push({
       pin: assignment.pin,
       edaName: edaPin.name,
       oldNet,
       newNet: assignment.label,
       status: 'change',
+      action,
       mode: assignment.mode,
       x: edaPin.x,
       y: edaPin.y,

@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import { useProjectStore } from '../stores/project'
 import { getDeviceData, deviceIds } from '../data/device'
 import {
-  applyNetPorts,
+  applySyncActions,
   fetchMcuPinMap,
   fetchProjectInfo,
   findMcuCandidates,
@@ -36,6 +36,7 @@ import type {
   ImportChangeKind,
   ImportPlan,
   McuPinMap,
+  SyncAction,
 } from '../lib/jlc/types'
 import type { PinAssignment } from '../types'
 
@@ -424,17 +425,24 @@ async function confirmExport() {
   }
   exporting.value = true
   try {
-    const count = await applyNetPorts(
+    const syncActions: SyncAction[] = changes.map((c) => ({
+      action: c.action ?? 'place-port',
+      net: c.newNet,
+      x: c.x ?? 0,
+      y: c.y ?? 0,
+      direction: c.mode === 'OUTPUT' ? 'OUT' : 'IN',
+      portId: c.portId,
+      oldNet: c.oldNet,
+    }))
+    const result = await applySyncActions(
       port.value,
-      changes.map((c) => ({
-        net: c.newNet,
-        direction: c.mode === 'OUTPUT' ? 'OUT' : 'IN',
-        x: c.x ?? 0,
-        y: c.y ?? 0,
-      })),
+      syncActions,
       selectedWindowId.value || undefined,
     )
-    ElMessage.success(`已放置 ${count} 个网络标签到 EDA`)
+    const fail = result.failed.length ? `，失败 ${result.failed.length}` : ''
+    ElMessage.success(
+      `同步完成：更新端口 ${result.updated}、改线段网络 ${result.renamed}、新增端口 ${result.placed}${fail}`,
+    )
     exportPreview.value = null
     await loadPinMap()
   } catch (err) {
@@ -450,6 +458,16 @@ function closeText(name: string): string {
     if (canonical) return `→ ${canonical}`
   }
   return ''
+}
+
+const actionLabels: Record<string, string> = {
+  'update-port': '更新端口',
+  'rename-wire': '改线段网络',
+  'place-port': '新增端口',
+}
+
+function actionText(action: string | undefined): string {
+  return actionLabels[action ?? ''] ?? '—'
 }
 
 onMounted(() => {
@@ -720,15 +738,22 @@ onMounted(() => {
         type="warning"
         :closable="false"
         show-icon
-        title="将在每个待同步引脚旁放置网络端口标签（网络名=标签），不改动已有线段"
-        :description="`输入端放置 IN 端口、输出端放置 OUT 端口；未连线引脚也会获得标签网络名；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
+        title="按引脚现有连接方式同步：已连端口→更新端口；线段→改线段网络；未连→新增 IN/OUT 端口"
+        :description="`跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
         style="margin-bottom: 8px"
       />
       <el-table :data="exportPreview.changes" size="small" max-height="280">
         <el-table-column prop="pin" label="引脚" width="90" />
         <el-table-column prop="edaName" label="EDA 引脚" width="150" />
+        <el-table-column label="操作" width="100">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.action === 'update-port' ? 'warning' : row.action === 'rename-wire' ? 'primary' : 'success'">
+              {{ actionText(row.action) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="当前网络">
-          <template #default="{ row }">{{ row.oldNet }}</template>
+          <template #default="{ row }">{{ row.oldNet ?? '未连接' }}</template>
         </el-table-column>
         <el-table-column label="目标网络">
           <template #default="{ row }">
@@ -737,7 +762,8 @@ onMounted(() => {
         </el-table-column>
       </el-table>
       <div class="summary">
-        将为 {{ exportPreview.changes.length }} 个引脚放置网络标签；{{ exportPreview.kept.length }} 条无需改动；
+        将同步 {{ exportPreview.changes.length }} 个引脚（更新端口 / 改线段 / 新增端口）；
+        {{ exportPreview.kept.length }} 条无需改动；
         跳过 {{ exportPreview.skipped.length }} 条。
       </div>
     </template>

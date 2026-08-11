@@ -223,19 +223,21 @@ describe('导出到 EDA 计划构建', () => {
     { number: '3', name: 'PA5', x: 0, y: 0, net: null },
   ]
 
-  it('未连线引脚也放置标签，其余按原因跳过', () => {
+  it('线段连接改网络、未连线新增端口，其余按原因跳过', () => {
     const plan = buildExportPlan(gd32, assignments, pinMap)
     expect(plan.changes.map((c) => c.pin).sort()).toEqual(['PA1', 'PA5'])
     expect(plan.changes.find((c) => c.pin === 'PA1')).toMatchObject({
       oldNet: 'INT',
       newNet: 'SDA',
       mode: 'INPUT',
+      action: 'rename-wire',
       x: 0,
       y: 0,
     })
     expect(plan.changes.find((c) => c.pin === 'PA5')).toMatchObject({
       oldNet: null,
       newNet: 'LED_R',
+      action: 'place-port',
     })
     expect(plan.kept.map((c) => c.pin)).toEqual(['PA0'])
     const skippedReason = new Map(plan.skipped.map((s) => [s.pin, s.skipReason]))
@@ -250,6 +252,36 @@ describe('导出到 EDA 计划构建', () => {
       [{ pin: 'PA4', label: 'LED_R', mode: 'OUTPUT', params: {} }],
       [{ number: '4', name: 'PA4', x: 100, y: 200, net: 'X' }],
     )
-    expect(plan.changes[0]).toMatchObject({ mode: 'OUTPUT', x: 100, y: 200, newNet: 'LED_R' })
+    expect(plan.changes[0]).toMatchObject({
+      mode: 'OUTPUT',
+      x: 100,
+      y: 200,
+      newNet: 'LED_R',
+      action: 'rename-wire',
+    })
+  })
+
+  it('已连接网络端口时更新端口而非改线段', () => {
+    const plan = buildExportPlan(
+      gd32,
+      [{ pin: 'PA6', label: 'NEW', mode: 'INPUT', params: {} }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'OLD', conn: 'port', portId: 'p1', portNet: 'OLD' }],
+    )
+    expect(plan.changes[0]).toMatchObject({
+      action: 'update-port',
+      portId: 'p1',
+      oldNet: 'OLD',
+      newNet: 'NEW',
+    })
+  })
+
+  it('端口网络名与标签相同时无需改动', () => {
+    const plan = buildExportPlan(
+      gd32,
+      [{ pin: 'PA6', label: 'SAME', mode: 'INPUT', params: {} }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'SAME', conn: 'port', portId: 'p1', portNet: 'SAME' }],
+    )
+    expect(plan.kept.map((c) => c.pin)).toEqual(['PA6'])
+    expect(plan.changes).toHaveLength(0)
   })
 })
