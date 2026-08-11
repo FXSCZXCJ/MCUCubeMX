@@ -7,6 +7,8 @@ export interface JlcPrefs {
   symbolName?: string
   /** 一键同步时跳过变更确认对话框 */
   autoSync?: boolean
+  /** 同步方式：端口模式（删线段+放端口）/ 线段模式（改线段网络名） */
+  syncMode?: 'port' | 'wire'
 }
 
 const STORAGE_KEY = 'mcucubemx:jlc-prefs'

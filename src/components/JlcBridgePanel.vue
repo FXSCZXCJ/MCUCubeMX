@@ -103,6 +103,12 @@ const otherBoards = computed(() =>
   (project.value?.boards ?? []).filter((b) => b.name !== project.value?.currentBoard),
 )
 
+const syncModeDesc = computed(() =>
+  prefs.value.syncMode === 'wire'
+    ? '线段模式：改线段网络名（不删线段、不放端口）'
+    : '端口模式：删线段并放置 IN/OUT 端口',
+)
+
 const kindLabels: Record<ImportChangeKind, string> = {
   add: '新增',
   change: '修改',
@@ -473,7 +479,12 @@ function confirmImport() {
 function prepareExport() {
   if (!port.value || !pinMap.value || !supportedDeviceId.value) return
   const device = getDeviceData(supportedDeviceId.value)
-  exportPreview.value = buildExportPlan(device, store.config.pins, pinMap.value.pins)
+  exportPreview.value = buildExportPlan(
+    device,
+    store.config.pins,
+    pinMap.value.pins,
+    prefs.value.syncMode ?? 'port',
+  )
 }
 
 async function confirmExport() {
@@ -583,6 +594,7 @@ const actionLabels: Record<string, string> = {
   'update-port': '更新端口',
   'replace-port': '更换端口',
   'wire-to-port': '删线段+放端口',
+  'rename-wire': '改线段网络',
   'place-port': '新增端口',
 }
 
@@ -613,6 +625,10 @@ onMounted(() => {
           <el-checkbox v-model="prefs.autoSync" size="small" @change="savePrefs(prefs)">
             同步免确认
           </el-checkbox>
+          <el-radio-group v-model="prefs.syncMode" size="small" @change="savePrefs(prefs)">
+            <el-radio-button value="port">端口模式</el-radio-button>
+            <el-radio-button value="wire">线段模式</el-radio-button>
+          </el-radio-group>
           <span class="hint">首次手动配置一次，之后自动恢复所选 MCU</span>
         </div>
         <div class="row">
@@ -880,8 +896,8 @@ onMounted(() => {
         type="warning"
         :closable="false"
         show-icon
-        title="按引脚现有连接方式同步：端口改名/方向调整→删除重放；线段→删除线段并放端口；未连→新增 IN/OUT 端口"
-        :description="`配置属性（模式/标签/上下拉/EXTI/输出参数）写入 MCU 元件本身；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
+        :title="syncModeDesc"
+        :description="`端口改名/方向调整→删除重放；配置属性（模式/标签/上下拉/EXTI/输出参数）写入 MCU 元件本身；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚${prefs.syncMode === 'wire' ? '，线段模式下未连线引脚' : ''}）。`"
         style="margin-bottom: 8px"
       />
       <el-table :data="exportPreview.changes" size="small" max-height="280">

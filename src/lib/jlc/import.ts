@@ -195,6 +195,7 @@ export function buildExportPlan(
   device: DeviceData,
   assignments: PinAssignment[],
   pinMap: EdaPinInfo[],
+  mode: 'port' | 'wire' = 'port',
 ): ExportPlan {
   const byCanonical = new Map<string, EdaPinInfo>()
   for (const p of pinMap) {
@@ -308,8 +309,21 @@ export function buildExportPlan(
       })
       continue
     }
-    // 线段连接：删除该线段并在引脚处放置网络端口（不再改线段网络名）
-    const action = conn === 'wire' ? 'wire-to-port' : 'place-port'
+    if (conn === 'none' && mode === 'wire') {
+      // 线段模式下未连线的引脚没有线段可改，跳过
+      items.push({
+        pin: assignment.pin,
+        edaName: edaPin.name,
+        oldNet: null,
+        newNet: assignment.label,
+        status: 'skip',
+        skipReason: 'EDA 中该引脚未连线，请先在原理图连线',
+      })
+      continue
+    }
+    // 端口模式：删除线段并在引脚处放置网络端口；线段模式：改线段网络名
+    const action =
+      conn === 'wire' ? (mode === 'wire' ? 'rename-wire' : 'wire-to-port') : 'place-port'
     items.push({
       pin: assignment.pin,
       edaName: edaPin.name,
