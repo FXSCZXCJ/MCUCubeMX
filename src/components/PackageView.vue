@@ -1,15 +1,47 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { device } from '../data/device'
 import { PIN_COLORS, SVG_SIZE, BODY, MARGIN, pinGeometry, type PinState } from '../lib/packageSvg'
 import { useProjectStore } from '../stores/project'
 import type { PinDef } from '../types'
 
 const store = useProjectStore()
-const zoom = ref(1.25)
+const viewRef = ref<HTMLElement | null>(null)
+const autoFit = ref(true)
+const manualFactor = ref(1)
+const autoZoom = ref(1)
 
-function changeZoom(delta: number) {
-  zoom.value = Math.min(2.5, Math.max(0.5, Math.round((zoom.value + delta) * 20) / 20))
+const MIN_ZOOM = 0.6
+const MAX_ZOOM = 2.5
+
+const effectiveZoom = computed(() =>
+  Math.min(
+    MAX_ZOOM,
+    Math.max(MIN_ZOOM, (autoFit.value ? autoZoom.value * manualFactor.value : manualFactor.value)),
+  ),
+)
+
+let observer: ResizeObserver | null = null
+
+onMounted(() => {
+  observer = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect.width
+    if (width) {
+      autoZoom.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, width / SVG_SIZE))
+    }
+  })
+  if (viewRef.value) observer.observe(viewRef.value)
+})
+
+onUnmounted(() => observer?.disconnect())
+
+function changeManual(delta: number) {
+  manualFactor.value = Math.min(2, Math.max(0.5, Math.round((manualFactor.value + delta) * 20) / 20))
+}
+
+function reset() {
+  autoFit.value = true
+  manualFactor.value = 1
 }
 
 function stateOf(pin: PinDef): PinState {
@@ -52,19 +84,20 @@ const LEGEND_LABELS: Record<string, string> = {
 </script>
 
 <template>
-  <div class="package-view">
+  <div ref="viewRef" class="package-view">
     <div class="package-toolbar">
-      <span class="zoom-label">显示比例 {{ Math.round(zoom * 100) }}%</span>
+      <span class="zoom-label">显示比例 {{ Math.round(effectiveZoom * 100) }}%</span>
+      <el-switch v-model="autoFit" size="small" active-text="自动适配" />
       <el-button-group>
-        <el-button size="small" title="缩小" @click="changeZoom(-0.25)">−</el-button>
-        <el-button size="small" title="重置为 125%" @click="zoom = 1.25">重置</el-button>
-        <el-button size="small" title="放大" @click="changeZoom(0.25)">＋</el-button>
+        <el-button size="small" title="缩小" @click="changeManual(-0.25)">−</el-button>
+        <el-button size="small" title="重置：自动适配 100%" @click="reset">重置</el-button>
+        <el-button size="small" title="放大" @click="changeManual(0.25)">＋</el-button>
       </el-button-group>
     </div>
     <div class="package-stage">
       <svg
-        :width="SVG_SIZE * zoom"
-        :height="SVG_SIZE * zoom"
+        :width="SVG_SIZE * effectiveZoom"
+        :height="SVG_SIZE * effectiveZoom"
         :viewBox="`0 0 ${SVG_SIZE} ${SVG_SIZE}`"
         class="package-svg"
       >
