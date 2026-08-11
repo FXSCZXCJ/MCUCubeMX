@@ -20,9 +20,12 @@ import {
   classifyEdaPin,
   matchDeviceIdBySymbol,
   normalizeEdaPinName,
+  pickRememberedMcu,
   prioritizeSelectedCandidates,
   resolveModelName,
 } from '../lib/jlc/import'
+import { loadPrefs, mergePrefs, savePrefs } from '../lib/jlc/prefs'
+import type { JlcPrefs } from '../lib/jlc/prefs'
 import type {
   BridgeHealth,
   EdaComponentInfo,
@@ -56,6 +59,8 @@ const matchMap = ref<Record<string, string>>({})
 const importPreview = ref<ImportDiffItem[] | null>(null)
 const exportPreview = ref<ExportPlan | null>(null)
 const exporting = ref(false)
+const syncing = ref(false)
+const prefs = ref<JlcPrefs>(loadPrefs())
 const loadingProject = ref(false)
 const loadingMcus = ref(false)
 const loadingPins = ref(false)
@@ -222,6 +227,12 @@ async function loadMcus() {
 function onCandidateChange(candidate: EdaComponentInfo | null) {
   selectedCandidate.value = candidate
   resetPins()
+  if (candidate) {
+    mergePrefs({
+      designator: candidate.designator,
+      symbolName: candidate.symbolName || candidate.modelName,
+    })
+  }
 }
 
 function resetPins() {
@@ -265,10 +276,60 @@ async function loadPinMap() {
       }
       matchMap.value = map
     }
+    mergePrefs({
+      designator: pinMap.value.designator,
+      symbolName: pinMap.value.symbolName || pinMap.value.modelName,
+      deviceId: supportedDeviceId.value ?? store.deviceId,
+    })
   } catch (err) {
     ElMessage.error(`读取引脚失败: ${bridgeErrorMessage(err, port.value)}`)
   } finally {
     loadingPins.value = false
+  }
+}
+
+/** 静默跑完整链路：连桥 → 窗口 → 工程 → MCU → 引脚映射 */
+async function autoSetup(): Promise<boolean> {
+  if (!port.value || !health.value?.edaConnected) {
+    await connect(true)
+  }
+  if (!port.value) return false
+  if (!project.value) await loadProject()
+  if (candidates.value.length === 0) await loadMcus()
+
+  const remembered = pickRememberedMcu(candidates.value, prefs.value.designator)
+  if (remembered && selectedCandidate.value?.primitiveId !== remembered.primitiveId) {
+    selectedCandidate.value = remembered
+    resetPins()
+  }
+  if (!selectedCandidate.value && candidates.value.length > 0) {
+    selectedCandidate.value = candidates.value[0]
+  }
+  if (!pinMap.value && selectedCandidate.value) await loadPinMap()
+  return !!pinMap.value
+}
+
+async function oneClickSync() {
+  if (syncing.value) return
+  syncing.value = true
+  try {
+    const ok = await autoSetup()
+    if (!ok) {
+      ElMessage.warning('自动准备失败：请检查桥与 EDA 连接状态')
+      return
+    }
+    if (!supportedDeviceId.value) {
+      ElMessage.warning('当前 MCU 不在支持列表，无法同步')
+      return
+    }
+    prepareExport()
+    if (!exportPreview.value) return
+    if (prefs.value.autoSync) {
+      await confirmExport()
+    }
+    // 未开启免确认时，等待用户在变更对比对话框里点“执行同步”
+  } finally {
+    syncing.value = false
   }
 }
 
@@ -352,7 +413,7 @@ function closeText(name: string): string {
 }
 
 onMounted(() => {
-  void connect(true)
+  void autoSetup()
 })
 </script>
 
@@ -367,6 +428,15 @@ onMounted(() => {
     <div class="jlc-panel">
       <section class="section">
         <div class="section-title">1. 连接本地桥</div>
+        <div class="row" style="margin-bottom: 8px">
+          <el-button size="small" type="primary" :loading="syncing" @click="oneClickSync">
+            一键同步
+          </el-button>
+          <el-checkbox v-model="prefs.autoSync" size="small" @change="savePrefs(prefs)">
+            同步免确认
+          </el-checkbox>
+          <span class="hint">首次手动配置一次，之后自动恢复所选 MCU</span>
+        </div>
         <div class="row">
           <el-tag :type="statusType" size="small">{{ statusText }}</el-tag>
           <el-button size="small" type="primary" :loading="scanning" @click="connect">

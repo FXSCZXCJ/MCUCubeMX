@@ -136,6 +136,15 @@ export function prioritizeSelectedCandidates<T extends { primitiveId: string }>(
   return { list, preferred: list.find((c) => selectedSet.has(c.primitiveId)) ?? null }
 }
 
+/** 在候选列表里找回上次记住的 MCU（按位号） */
+export function pickRememberedMcu<T extends { designator: string }>(
+  candidates: T[],
+  designator?: string,
+): T | null {
+  if (!designator) return null
+  return candidates.find((c) => c.designator === designator) ?? null
+}
+
 /**
  * 对比当前工程配置与待导入计划，生成变更清单：
  * 导入会整体替换引脚配置，因此当前有而计划里没有的引脚标记为“移除”。
