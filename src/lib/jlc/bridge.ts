@@ -403,7 +403,7 @@ for (const a of actions.filter((x) => x.action === 'place-port')) {
     failures.push('新增端口 ' + a.net + ': ' + (err && err.message));
   }
 }
-return { updated, replaced, renamed, placed, failures };`
+return { updated, replaced, renamed, placed, failed: failures };`
   return execute<SyncResult>(port, code, windowId)
 }
 

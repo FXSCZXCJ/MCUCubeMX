@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applySyncActions,
+  execute,
   fetchMcuPinMap,
   fetchProjectInfo,
   findMcuCandidates,
@@ -37,5 +39,30 @@ describe('嘉立创桥集成测试', () => {
     const map = await fetchMcuPinMap(live!.port, candidates[0].primitiveId)
     expect(map.pins.length).toBeGreaterThan(0)
     expect(map.pins[0]).toHaveProperty('net')
+  })
+
+  it.runIf(run)('同步动作返回结构含 failed 字段', async () => {
+    const x = 9000
+    const y = 9000
+    const res = await applySyncActions(live!.port, [
+      { action: 'place-port', net: '__SYNC_TEST__', x, y, direction: 'IN', rotation: 0 },
+    ])
+    expect(res.placed).toBe(1)
+    expect(Array.isArray(res.failed)).toBe(true)
+    const code = `
+const comps = await eda.sch_PrimitiveComponent.getAll(undefined, false);
+let removed = 0;
+for (const c of comps || []) {
+  let cx = null;
+  let cy = null;
+  try { cx = await c.getState_X(); } catch {}
+  try { cy = await c.getState_Y(); } catch {}
+  if (cx === ${x} && cy === ${y}) {
+    try { await eda.sch_PrimitiveComponent.delete(c.primitiveId); removed++; } catch {}
+  }
+}
+return removed;`
+    const removed = await execute<number>(live!.port, code)
+    expect(removed).toBeGreaterThan(0)
   })
 })

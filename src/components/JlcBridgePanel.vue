@@ -525,12 +525,17 @@ async function confirmExport() {
 
     const parts: string[] = []
     if (result) {
+      const failed = (
+        (result as SyncResult & { failures?: string[] }).failures ??
+        result.failed ??
+        []
+      ) as string[]
       parts.push(
         `更新端口 ${result.updated}、更换端口 ${result.replaced}、改线段网络 ${result.renamed}、新增端口 ${result.placed}`,
       )
-      if (result.failed.length) parts.push(`失败 ${result.failed.length}`)
-      if (result.failed.length) {
-        logWarn('同步部分动作失败', { failures: result.failed })
+      if (failed.length) parts.push(`失败 ${failed.length}`)
+      if (failed.length) {
+        logWarn('同步部分动作失败', { failures: failed })
       }
     } else {
       parts.push('无网络变更')
