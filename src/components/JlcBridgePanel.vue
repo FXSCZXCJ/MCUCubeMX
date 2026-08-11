@@ -125,6 +125,24 @@ function bridgeErrorMessage(err: unknown, portValue: number | null): string {
   return err instanceof Error ? err.message : String(err)
 }
 
+function isStaleWindowError(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    /no longer connected|not found in connected clients/i.test(err.message)
+  )
+}
+
+/** EDA 扩展重连后窗口 UUID 会变：遇到“窗口已断开”时刷新窗口并重试一次 */
+async function withFreshWindow<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    if (!isStaleWindowError(err)) throw err
+    await refreshWindows()
+    return await fn()
+  }
+}
+
 function close() {
   emit('update:modelValue', false)
 }
@@ -214,7 +232,9 @@ async function loadMcus() {
     const all = await findMcuCandidates(port.value)
     let selected: string[] = []
     try {
-      selected = await getSelectedPrimitiveIds(port.value, selectedWindowId.value || undefined)
+      selected = await withFreshWindow(() =>
+        getSelectedPrimitiveIds(port.value!, selectedWindowId.value || undefined),
+      )
     } catch {
       /* 读取选中失败不影响候选列表 */
     }
@@ -256,10 +276,12 @@ async function loadPinMap() {
   if (!port.value || !selectedCandidate.value) return
   loadingPins.value = true
   try {
-    pinMap.value = await fetchMcuPinMap(
-      port.value,
-      selectedCandidate.value.primitiveId,
-      selectedWindowId.value || undefined,
+    pinMap.value = await withFreshWindow(() =>
+      fetchMcuPinMap(
+        port.value!,
+        selectedCandidate.value!.primitiveId,
+        selectedWindowId.value || undefined,
+      ),
     )
     const deviceId = supportedDeviceId.value
     if (deviceId) {
@@ -439,10 +461,12 @@ async function confirmExport() {
       portId: c.portId,
       oldNet: c.oldNet,
     }))
-    const result = await applySyncActions(
-      port.value,
-      syncActions,
-      selectedWindowId.value || undefined,
+    const result = await withFreshWindow(() =>
+      applySyncActions(
+        port.value!,
+        syncActions,
+        selectedWindowId.value || undefined,
+      ),
     )
     const fail = result.failed.length ? `，失败 ${result.failed.length}` : ''
     ElMessage.success(
