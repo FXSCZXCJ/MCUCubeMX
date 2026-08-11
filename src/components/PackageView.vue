@@ -222,7 +222,7 @@ function displayLabel(pin: PinDef): string | undefined {
           stroke-width="2"
         />
         <!-- Pin 1 方向标记：左上角凹陷圆点 -->
-        <circle :cx="geo.margin + 10" :cy="geo.margin + 10" r="4.5" fill="#374151">
+        <circle :cx="geo.margin + 13" :cy="geo.margin + 13" r="5.5" fill="#374151">
           <title>Pin 1 方向标记</title>
         </circle>
         <text
