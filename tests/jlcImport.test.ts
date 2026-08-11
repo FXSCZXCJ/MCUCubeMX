@@ -273,6 +273,26 @@ describe('同步模式选择', () => {
       ['PA5', 'add-wire'],
     ])
   })
+
+  it('转化模式不因网络名相同而跳过：同名线段也转端口、同名端口也转线段', () => {
+    const conv = buildExportPlan(
+      gd32,
+      [{ pin: 'PA1', label: 'INT', mode: 'INPUT', params: {} }],
+      [{ number: '2', name: 'PA1', x: 0, y: 0, net: 'INT' }],
+      'convert',
+    )
+    expect(conv.changes.map((c) => c.action)).toEqual(['wire-to-port'])
+    expect(conv.kept).toHaveLength(0)
+
+    const tow = buildExportPlan(
+      gd32,
+      [{ pin: 'PA6', label: 'SAME', mode: 'INPUT', params: {} }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'SAME', conn: 'port', portId: 'p1', portNet: 'SAME', portDir: 'IN' }],
+      'towire',
+    )
+    expect(tow.changes.map((c) => c.action)).toEqual(['port-to-wire'])
+    expect(tow.kept).toHaveLength(0)
+  })
 })
 
 describe('导入变更对比', () => {
@@ -325,7 +345,12 @@ describe('导出到 EDA 计划构建', () => {
 
   it('线段连接转为端口（删线段）、未连线新增端口，其余按原因跳过', () => {
     const plan = buildExportPlan(gd32, assignments, pinMap, 'convert')
-    expect(plan.changes.map((c) => c.pin).sort()).toEqual(['PA1', 'PA5'])
+    expect(plan.changes.map((c) => c.pin).sort()).toEqual(['PA0', 'PA1', 'PA5'])
+    expect(plan.changes.find((c) => c.pin === 'PA0')).toMatchObject({
+      oldNet: 'ADC',
+      newNet: 'ADC',
+      action: 'wire-to-port',
+    })
     expect(plan.changes.find((c) => c.pin === 'PA1')).toMatchObject({
       oldNet: 'INT',
       newNet: 'SDA',
@@ -340,7 +365,7 @@ describe('导出到 EDA 计划构建', () => {
       action: 'place-port',
       rotation: 0,
     })
-    expect(plan.kept.map((c) => c.pin)).toEqual(['PA0'])
+    expect(plan.kept).toHaveLength(0)
     const skippedReason = new Map(plan.skipped.map((s) => [s.pin, s.skipReason]))
     expect(skippedReason.get('PA2')).toContain('未设置标签')
     expect(skippedReason.get('PB2')).toContain('特殊引脚')

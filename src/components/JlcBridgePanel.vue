@@ -828,6 +828,15 @@ onMounted(() => {
               <span :class="{ 'net-empty': !row.net }">{{ row.net ?? '—' }}</span>
             </template>
           </el-table-column>
+          <el-table-column label="连接" width="110">
+            <template #default="{ row }">
+              <el-tag v-if="row.conn === 'port'" size="small" type="warning">
+                端口{{ row.portDir ? `·${row.portDir}` : '·电源' }}
+              </el-tag>
+              <el-tag v-else-if="row.conn === 'wire'" size="small" type="primary">线段</el-tag>
+              <el-tag v-else size="small" type="info">未连接</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="匹配" width="110">
             <template #default="{ row }">
               <span class="match">{{ matchMap[row.name] ?? closeText(row.name) }}</span>

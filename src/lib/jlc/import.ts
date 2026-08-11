@@ -256,17 +256,7 @@ export function buildExportPlan(
 
     if (conn === 'port') {
       if (mode === 'towire') {
-        // 转化为线段：端口网络名与标签一致则保持，否则删端口放线段
-        if (edaPin.portNet === assignment.label) {
-          items.push({
-            pin: assignment.pin,
-            edaName: edaPin.name,
-            oldNet: edaPin.portNet ?? null,
-            newNet: assignment.label,
-            status: 'keep',
-          })
-          continue
-        }
+        // 转化为线段：端口一律删除并放线段（网络名=标签）
         items.push({
           pin: assignment.pin,
           edaName: edaPin.name,
@@ -326,7 +316,8 @@ export function buildExportPlan(
       continue
     }
 
-    if (oldNet === assignment.label) {
+    // 转化模式下不因网络名相同而跳过：连接方式不是目标类型就要转换
+    if (oldNet === assignment.label && mode !== 'convert') {
       items.push({
         pin: assignment.pin,
         edaName: edaPin.name,
