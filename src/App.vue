@@ -102,7 +102,7 @@ async function clearAll() {
         <el-input
           :model-value="store.prefix"
           size="small"
-          style="width: 96px"
+          style="width: 160px"
           @update:model-value="store.setPrefix($event)"
         >
           <template #prepend>前缀</template>
