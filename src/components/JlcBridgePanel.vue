@@ -128,6 +128,19 @@ function bridgeErrorMessage(err: unknown, portValue: number | null): string {
   return err instanceof Error ? err.message : String(err)
 }
 
+/** 操作失败时输出控制台详细日志，方便排查桥/EDA 问题 */
+function logError(context: string, err: unknown, extra?: Record<string, unknown>) {
+  console.error(`[JLC] ${context}`, {
+    message: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+    ...extra,
+  })
+}
+
+function logWarn(context: string, extra?: Record<string, unknown>) {
+  console.warn(`[JLC] ${context}`, extra)
+}
+
 function isStaleWindowError(err: unknown): boolean {
   return (
     err instanceof Error &&
@@ -167,6 +180,7 @@ async function connect(silent = false) {
     if (!silent) ElMessage.success(`已连接 Bridge Server（端口 ${found.port}）`)
   } catch (err) {
     if (!silent) ElMessage.error(`连接失败: ${bridgeErrorMessage(err, port.value)}`)
+    logError('连接桥失败', err, { port: port.value })
   } finally {
     scanning.value = false
   }
@@ -181,6 +195,7 @@ async function refreshWindows() {
     if (active) await selectEdaWindow(port.value, active.windowId)
   } catch (err) {
     ElMessage.error(`读取 EDA 窗口失败: ${bridgeErrorMessage(err, port.value)}`)
+    logError('读取 EDA 窗口失败', err, { port: port.value })
   }
 }
 
@@ -194,6 +209,7 @@ async function onWindowChange(windowId: string) {
     resetPins()
   } catch (err) {
     ElMessage.error(`切换窗口失败: ${bridgeErrorMessage(err, port.value)}`)
+    logError('切换窗口失败', err, { port: port.value, windowId })
   }
 }
 
@@ -223,6 +239,11 @@ async function loadProject() {
       }
     }
     ElMessage.error(`读取工程失败: ${bridgeErrorMessage(err, port.value)}`)
+    logError('读取工程失败', err, {
+      port: port.value,
+      windowId: selectedWindowId.value || null,
+      project: project.value?.name ?? null,
+    })
   } finally {
     loadingProject.value = false
   }
@@ -253,6 +274,10 @@ async function loadMcus() {
     }
   } catch (err) {
     ElMessage.error(`扫描器件失败: ${bridgeErrorMessage(err, port.value)}`)
+    logError('扫描 MCU 失败', err, {
+      port: port.value,
+      windowId: selectedWindowId.value || null,
+    })
   } finally {
     loadingMcus.value = false
   }
@@ -319,6 +344,13 @@ async function loadPinMap() {
     })
   } catch (err) {
     ElMessage.error(`读取引脚失败: ${bridgeErrorMessage(err, port.value)}`)
+    logError('读取引脚映射失败', err, {
+      port: port.value,
+      windowId: selectedWindowId.value || null,
+      candidate: selectedCandidate.value
+        ? `${selectedCandidate.value.designator} (${selectedCandidate.value.symbolName})`
+        : null,
+    })
   } finally {
     loadingPins.value = false
   }
@@ -497,16 +529,38 @@ async function confirmExport() {
         `更新端口 ${result.updated}、更换端口 ${result.replaced}、改线段网络 ${result.renamed}、新增端口 ${result.placed}`,
       )
       if (result.failed.length) parts.push(`失败 ${result.failed.length}`)
+      if (result.failed.length) {
+        logWarn('同步部分动作失败', { failures: result.failed })
+      }
     } else {
       parts.push('无网络变更')
     }
     const attrCount = Object.keys(attrs).length
     parts.push(attrCount === 0 ? '无属性可写' : attrOk ? `属性已写入 MCU（${attrCount} 项）` : '属性写入失败')
+    if (attrCount > 0 && !attrOk) {
+      logWarn('属性写入失败', { attrs: Object.keys(attrs) })
+    }
+    console.info('[JLC] 同步完成', {
+      result,
+      attrOk,
+      attrCount,
+      windowId: selectedWindowId.value || null,
+    })
     ElMessage.success(`同步完成：${parts.join('；')}`)
     exportPreview.value = null
     await loadPinMap()
   } catch (err) {
     ElMessage.error(`同步失败: ${bridgeErrorMessage(err, port.value)}`)
+    logError('同步到 EDA 失败', err, {
+      port: port.value,
+      windowId: selectedWindowId.value || null,
+      changes: changes.map((c) => ({
+        pin: c.pin,
+        action: c.action,
+        oldNet: c.oldNet,
+        newNet: c.newNet,
+      })),
+    })
   } finally {
     exporting.value = false
   }

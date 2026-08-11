@@ -91,9 +91,29 @@ export async function execute<T = unknown>(
       | null
     if (!res.ok || !data?.success) {
       // 透传 EDA 的真实错误，避免只看到 "HTTP 500"
-      throw new Error(data?.error || `HTTP ${res.status}`)
+      const message = data?.error || `HTTP ${res.status}`
+      console.error('[JLC/execute] 调用失败', {
+        status: res.status,
+        error: message,
+        windowId: windowId ?? null,
+        code: code.slice(0, 400),
+      })
+      const err = new Error(message) as Error & { jlcLogged?: boolean }
+      err.jlcLogged = true
+      throw err
     }
     return data.result as T
+  } catch (err) {
+    if (!(err instanceof Error && (err as Error & { jlcLogged?: boolean }).jlcLogged)) {
+      // 网络层失败（连接被拒/超时/中止）也记录
+      console.error('[JLC/execute] 网络层失败', {
+        port,
+        windowId: windowId ?? null,
+        error: err instanceof Error ? err.message : String(err),
+        code: code.slice(0, 200),
+      })
+    }
+    throw err
   } finally {
     clearTimeout(timer)
   }
