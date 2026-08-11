@@ -228,6 +228,7 @@ function displayLabel(pin: PinDef): string | undefined {
         <circle :cx="geo.margin + 50" :cy="geo.margin + 50" r="10" fill="#374151">
           <title>Pin 1 方向标记</title>
         </circle>
+        <!-- 器件名与型号合并为同一文字块，反向补偿旋转时两行不会互相重叠 -->
         <text
           class="pin-text"
           :style="pinTextStyle"
@@ -239,17 +240,9 @@ function displayLabel(pin: PinDef): string | undefined {
           fill="#374151"
         >
           {{ device.device }}
-        </text>
-        <text
-          class="pin-text"
-          :style="pinTextStyle"
-          :x="geo.svgSize / 2"
-          :y="geo.svgSize / 2 + 14"
-          text-anchor="middle"
-          font-size="12"
-          fill="#6b7280"
-        >
-          {{ device.package }} · {{ device.core }}
+          <tspan :x="geo.svgSize / 2" dy="22" font-size="12" font-weight="400" fill="#6b7280">
+            {{ device.package }} · {{ device.core }}
+          </tspan>
         </text>
 
         <g
