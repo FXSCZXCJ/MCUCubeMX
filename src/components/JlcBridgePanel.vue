@@ -154,6 +154,29 @@ function logWarn(context: string, extra?: Record<string, unknown>) {
   console.warn(`[JLC] ${context}`, extra)
 }
 
+async function copyCommand(cmd: string) {
+  try {
+    await navigator.clipboard.writeText(cmd)
+    ElMessage.success(`已复制：${cmd}`)
+  } catch {
+    // 剪贴板 API 不可用时降级为临时输入框复制
+    const ta = document.createElement('textarea')
+    ta.value = cmd
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    try {
+      document.execCommand('copy')
+      ElMessage.success(`已复制：${cmd}`)
+    } catch {
+      ElMessage.error('复制失败，请手动复制命令')
+    } finally {
+      document.body.removeChild(ta)
+    }
+  }
+}
+
 function isStaleWindowError(err: unknown): boolean {
   return (
     err instanceof Error &&
@@ -648,7 +671,13 @@ onMounted(() => {
             扫描连接
           </el-button>
           <el-button size="small" :disabled="!port" @click="refreshWindows">刷新窗口</el-button>
-          <span class="hint">需先启动 bridge-server.mjs，并安装 run-api-gateway 扩展</span>
+          <span class="hint">
+            需先启动本地桥
+            <code>npm run dev:all</code>，并安装 run-api-gateway 扩展
+            <el-button size="small" text type="primary" @click="copyCommand('npm run dev:all')">
+              复制命令
+            </el-button>
+          </span>
         </div>
         <el-alert
           v-if="!port"
@@ -656,9 +685,16 @@ onMounted(() => {
           :closable="false"
           show-icon
           title="未检测到本地桥"
-          description="请先在终端运行 npm run jlc:bridge（或 npm run dev:all 一键启动），并确保 EDA 已安装 run-api-gateway 扩展。"
           style="margin-top: 8px"
-        />
+        >
+          <div class="offline-tip">
+            请运行 <code>npm run dev:all</code>（一键启动 Vite + 桥）或
+            <code>npm run jlc:bridge</code>，并确保 EDA 已安装 run-api-gateway 扩展。
+            <el-button size="small" type="primary" plain @click="copyCommand('npm run dev:all')">
+              一键复制命令
+            </el-button>
+          </div>
+        </el-alert>
         <el-alert
           v-else-if="!health?.edaConnected"
           type="warning"
@@ -1009,6 +1045,25 @@ onMounted(() => {
 .hint {
   color: #9ca3af;
   font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hint code,
+.offline-tip code {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  color: #d9480f;
+}
+.offline-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
 }
 .net-empty {
   color: #c0c4cc;
