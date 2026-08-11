@@ -52,17 +52,20 @@ describe('嘉立创桥集成测试', () => {
     const code = `
 const comps = await eda.sch_PrimitiveComponent.getAll(undefined, false);
 let removed = 0;
+let foundName = '';
 for (const c of comps || []) {
   let cx = null;
   let cy = null;
   try { cx = await c.getState_X(); } catch {}
   try { cy = await c.getState_Y(); } catch {}
   if (cx === ${x} && cy === ${y}) {
+    try { foundName = (await c.getState_Name()) || ''; } catch {}
     try { await eda.sch_PrimitiveComponent.delete(c.primitiveId); removed++; } catch {}
   }
 }
-return removed;`
-    const removed = await execute<number>(live!.port, code)
-    expect(removed).toBeGreaterThan(0)
+return { removed, foundName };`
+    const res2 = await execute<{ removed: number; foundName: string }>(live!.port, code)
+    expect(res2.removed).toBeGreaterThan(0)
+    expect(res2.foundName).toBe('__SYNC_TEST__')
   })
 })

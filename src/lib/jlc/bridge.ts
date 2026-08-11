@@ -226,6 +226,9 @@ for (const c of portComps || []) {
   if (!/netport|netflag|power|ground|voltage|^vcc|^vdd|^vss/i.test(symbolName)) continue;
   let other = {};
   try { other = (await c.getState_OtherProperty()) || {}; } catch {}
+  // NetPort 的网络名存在元件 Name 属性里（电源符号在 Global Net Name）
+  let portName = '';
+  try { portName = (await c.getState_Name()) || ''; } catch {}
   let dir = null;
   const dirMatch = /^netport-([a-z0-9]+)/i.exec(symbolName);
   if (dirMatch) dir = dirMatch[1].toUpperCase();
@@ -236,7 +239,13 @@ for (const c of portComps || []) {
   try { cx = await c.getState_X(); } catch {}
   try { cy = await c.getState_Y(); } catch {}
   if (typeof cx === 'number' && typeof cy === 'number') {
-    portList.push({ id: c.primitiveId, x: cx, y: cy, net: other['Global Net Name'] || other['Net'] || '', dir });
+    portList.push({
+      id: c.primitiveId,
+      x: cx,
+      y: cy,
+      net: other['Global Net Name'] || portName || other['Net'] || '',
+      dir,
+    });
   }
 }
 // 导线连通图：端口放在线段末端而非引脚尖时，也能通过同一线段网识别为已连接
