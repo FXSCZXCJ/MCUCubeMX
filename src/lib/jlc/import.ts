@@ -268,7 +268,8 @@ export function buildExportPlan(
         })
         continue
       }
-      if (isNetPort && !sameDir) {
+      if (isNetPort) {
+        // NetPort 修改被 API 禁止（仅元件可 modify），改名/方向调整统一删除重放
         items.push({
           pin: assignment.pin,
           edaName: edaPin.name,

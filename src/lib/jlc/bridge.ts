@@ -77,17 +77,26 @@ export async function execute<T = unknown>(
   code: string,
   windowId?: string,
 ): Promise<T> {
-  const res = await jsonFetch<{ success: boolean; result?: T; error?: string }>(
-    `http://127.0.0.1:${port}/execute`,
-    {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 35000)
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/execute`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, windowId }),
-    },
-    35000,
-  )
-  if (!res.success) throw new Error(res.error || 'EDA 执行失败')
-  return res.result as T
+      signal: controller.signal,
+    })
+    const data = (await res.json().catch(() => null)) as
+      | { success?: boolean; result?: T; error?: string }
+      | null
+    if (!res.ok || !data?.success) {
+      // 透传 EDA 的真实错误，避免只看到 "HTTP 500"
+      throw new Error(data?.error || `HTTP ${res.status}`)
+    }
+    return data.result as T
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export async function fetchProjectInfo(port: number): Promise<EdaProjectInfo | null> {
@@ -178,7 +187,8 @@ try { const s = await comp.getState_Symbol(); symbolName = (s && s.name) || ''; 
 try { nameAttr = (await comp.getState_Name()) || ''; } catch {}
 try { const c = await comp.getState_Component(); componentName = (c && c.name) || ''; } catch {}
 const pins = await eda.sch_PrimitiveComponent.getAllPinsByPrimitiveId('${primitiveId}');
-const wires = await eda.sch_PrimitiveWire.getAll();
+let wires = [];
+try { wires = await eda.sch_PrimitiveWire.getAll(); } catch (err) { failures.push('读取导线: ' + (err && err.message)); }
 const wireList = [];
 for (const w of wires || []) {
   const line = await w.getState_Line();

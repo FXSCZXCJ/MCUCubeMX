@@ -262,14 +262,14 @@ describe('导出到 EDA 计划构建', () => {
     })
   })
 
-  it('已连接网络端口时更新端口而非改线段', () => {
+  it('NetPort 需要改名时删除重放（modify 对端口被 API 禁止）', () => {
     const plan = buildExportPlan(
       gd32,
       [{ pin: 'PA6', label: 'NEW', mode: 'INPUT', params: {} }],
       [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'OLD', conn: 'port', portId: 'p1', portNet: 'OLD', portDir: 'IN' }],
     )
     expect(plan.changes[0]).toMatchObject({
-      action: 'update-port',
+      action: 'replace-port',
       portId: 'p1',
       oldNet: 'OLD',
       newNet: 'NEW',
@@ -319,5 +319,14 @@ describe('导出到 EDA 计划构建', () => {
       [{ number: '6', name: 'PA6', x: 10, y: 20, net: '3V3', conn: 'port', portId: 'p1', portNet: '3V3', portDir: null }],
     )
     expect(plan.kept.map((c) => c.pin)).toEqual(['PA6'])
+  })
+
+  it('电源符号网络名不同时尝试更新而非替换', () => {
+    const plan = buildExportPlan(
+      gd32,
+      [{ pin: 'PA6', label: 'VCC_NEW', mode: 'OUTPUT', params: {} }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'VCC_OLD', conn: 'port', portId: 'p1', portNet: 'VCC_OLD', portDir: null }],
+    )
+    expect(plan.changes[0]).toMatchObject({ action: 'update-port', oldNet: 'VCC_OLD', newNet: 'VCC_NEW' })
   })
 })

@@ -766,7 +766,7 @@ onMounted(() => {
         type="warning"
         :closable="false"
         show-icon
-        title="按引脚现有连接方式同步：端口方向不符→删除重放；线段→改线段网络；未连→新增 IN/OUT 端口"
+        title="按引脚现有连接方式同步：端口改名/方向调整→删除重放；线段→改线段网络；未连→新增 IN/OUT 端口"
         :description="`跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
         style="margin-bottom: 8px"
       />
