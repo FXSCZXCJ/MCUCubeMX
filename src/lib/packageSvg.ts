@@ -4,15 +4,16 @@ export const PAD_W = 14
 export const PAD_LEN = 20
 // 外侧标签留白：配置标签不再截断，留足左右侧水平延伸空间
 export const LABEL_MARGIN = 64
-// 四角引脚的内侧 GPIO 名沿本边向内偏移量，避免与相邻边角上引脚重叠
-export const CORNER_INNER_SHIFT = 16
+// 相邻引脚名称标签不重叠所需的最小间距（已在 LQFP64/LQFP100 上验证）
+export const PITCH = 28.8
+// 四角让位：每边首尾引脚向内侧收缩半个节距，增大直角与引脚的间距，
+// 使相邻两条边角上引脚的内侧 GPIO 名不再重叠
+export const CORNER_PAD_INSET = PITCH / 2
 
 /** 角度归一化到 [0, 360) */
 export function normalizeRotation(deg: number): number {
   return ((deg % 360) + 360) % 360
 }
-// 相邻引脚名称标签不重叠所需的最小间距（已在 LQFP64/LQFP100 上验证）
-export const PITCH = 28.8
 
 export interface PackageGeometry {
   body: number
@@ -52,7 +53,8 @@ export interface PinGeometry {
 }
 
 function along(bodyStart: number, i: number, geo: PackageGeometry): number {
-  return bodyStart + ((i + 0.5) * geo.body) / geo.pinsPerSide
+  const span = geo.body - 2 * CORNER_PAD_INSET
+  return bodyStart + CORNER_PAD_INSET + ((i + 0.5) * span) / geo.pinsPerSide
 }
 
 export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
@@ -61,8 +63,6 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
   const side = pin.side
   if (side === 'top') {
     const x = along(geo.margin, sideIndex, geo)
-    const cornerShift =
-      sideIndex === 0 ? CORNER_INNER_SHIFT : sideIndex === geo.pinsPerSide - 1 ? -CORNER_INNER_SHIFT : 0
     return {
       x: x - PAD_W / 2,
       y: geo.margin - PAD_LEN,
@@ -71,15 +71,13 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
       labelX: x,
       labelY: geo.margin - PAD_LEN - 8,
       anchor: 'middle',
-      innerX: x + cornerShift,
+      innerX: x,
       innerY: geo.margin + 12,
       innerAnchor: 'middle',
     }
   }
   if (side === 'right') {
     const y = along(geo.margin, sideIndex, geo)
-    const cornerShift =
-      sideIndex === 0 ? CORNER_INNER_SHIFT : sideIndex === geo.pinsPerSide - 1 ? -CORNER_INNER_SHIFT : 0
     return {
       x: geo.margin + geo.body,
       y: y - PAD_W / 2,
@@ -89,14 +87,12 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
       labelY: y + 4,
       anchor: 'start',
       innerX: geo.margin + geo.body - 8,
-      innerY: y + 4 + cornerShift,
+      innerY: y + 4,
       innerAnchor: 'end',
     }
   }
   if (side === 'bottom') {
     const x = along(geo.margin, geo.pinsPerSide - 1 - sideIndex, geo)
-    const cornerShift =
-      sideIndex === 0 ? CORNER_INNER_SHIFT : sideIndex === geo.pinsPerSide - 1 ? -CORNER_INNER_SHIFT : 0
     return {
       x: x - PAD_W / 2,
       y: geo.margin + geo.body,
@@ -105,15 +101,13 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
       labelX: x,
       labelY: geo.margin + geo.body + PAD_LEN + 16,
       anchor: 'middle',
-      innerX: x + cornerShift,
+      innerX: x,
       innerY: geo.margin + geo.body - 10,
       innerAnchor: 'middle',
     }
   }
   // left: pins run bottom -> top
   const y = along(geo.margin, geo.pinsPerSide - 1 - sideIndex, geo)
-  const cornerShift =
-    sideIndex === 0 ? -CORNER_INNER_SHIFT : sideIndex === geo.pinsPerSide - 1 ? CORNER_INNER_SHIFT : 0
   return {
     x: geo.margin - PAD_LEN,
     y: y - PAD_W / 2,
@@ -123,7 +117,7 @@ export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
     labelY: y + 4,
     anchor: 'end',
     innerX: geo.margin + 8,
-    innerY: y + 4 + cornerShift,
+    innerY: y + 4,
     innerAnchor: 'start',
   }
 }
