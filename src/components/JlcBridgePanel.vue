@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useProjectStore } from '../stores/project'
 import { getDeviceData, deviceIds } from '../data/device'
@@ -7,6 +7,7 @@ import {
   fetchMcuPinMap,
   fetchProjectInfo,
   findMcuCandidates,
+  getSelectedPrimitiveIds,
   getEdaWindows,
   scanBridge,
   selectEdaWindow,
@@ -16,6 +17,7 @@ import {
   classifyEdaPin,
   matchDeviceIdBySymbol,
   normalizeEdaPinName,
+  prioritizeSelectedCandidates,
 } from '../lib/jlc/import'
 import type {
   BridgeHealth,
@@ -39,6 +41,7 @@ const windows = ref<EdaWindow[]>([])
 const selectedWindowId = ref('')
 const project = ref<EdaProjectInfo | null>(null)
 const candidates = ref<EdaComponentInfo[]>([])
+const selectedIds = ref<string[]>([])
 const selectedCandidate = ref<EdaComponentInfo | null>(null)
 const pinMap = ref<McuPinMap | null>(null)
 const plan = ref<ImportPlan | null>(null)
@@ -64,11 +67,25 @@ const statusText = computed(() => {
   return '未连接'
 })
 
+function isNetworkError(err: unknown): boolean {
+  return (
+    err instanceof TypeError ||
+    (err instanceof Error && /failed to fetch|networkerror|fetch failed/i.test(err.message))
+  )
+}
+
+function bridgeErrorMessage(err: unknown, portValue: number | null): string {
+  if (isNetworkError(err)) {
+    return `无法连接本地桥 (127.0.0.1:${portValue ?? '49620-49629'})：请先运行 npm run jlc:bridge，并确认桥进程存活`
+  }
+  return err instanceof Error ? err.message : String(err)
+}
+
 function close() {
   emit('update:modelValue', false)
 }
 
-async function connect() {
+async function connect(silent = false) {
   scanning.value = true
   try {
     const found = await scanBridge()
@@ -76,15 +93,15 @@ async function connect() {
       port.value = null
       health.value = null
       windows.value = []
-      ElMessage.warning('未发现本地 Bridge Server，请先启动 bridge-server.mjs 并安装 run-api-gateway 扩展')
+      if (!silent) ElMessage.warning('未发现本地 Bridge Server，请先运行 npm run jlc:bridge')
       return
     }
     port.value = found.port
     health.value = found.health
     await refreshWindows()
-    ElMessage.success(`已连接 Bridge Server（端口 ${found.port}）`)
+    if (!silent) ElMessage.success(`已连接 Bridge Server（端口 ${found.port}）`)
   } catch (err) {
-    ElMessage.error(`连接失败: ${err instanceof Error ? err.message : String(err)}`)
+    if (!silent) ElMessage.error(`连接失败: ${bridgeErrorMessage(err, port.value)}`)
   } finally {
     scanning.value = false
   }
@@ -98,7 +115,7 @@ async function refreshWindows() {
     selectedWindowId.value = active?.windowId ?? ''
     if (active) await selectEdaWindow(port.value, active.windowId)
   } catch (err) {
-    ElMessage.error(`读取 EDA 窗口失败: ${err instanceof Error ? err.message : String(err)}`)
+    ElMessage.error(`读取 EDA 窗口失败: ${bridgeErrorMessage(err, port.value)}`)
   }
 }
 
@@ -108,9 +125,10 @@ async function onWindowChange(windowId: string) {
     await selectEdaWindow(port.value, windowId)
     project.value = null
     candidates.value = []
+    selectedIds.value = []
     resetPins()
   } catch (err) {
-    ElMessage.error(`切换窗口失败: ${err instanceof Error ? err.message : String(err)}`)
+    ElMessage.error(`切换窗口失败: ${bridgeErrorMessage(err, port.value)}`)
   }
 }
 
@@ -120,10 +138,26 @@ async function loadProject() {
   try {
     project.value = await fetchProjectInfo(port.value)
     candidates.value = []
+    selectedIds.value = []
     resetPins()
     if (!project.value) ElMessage.warning('EDA 中当前没有打开工程')
   } catch (err) {
-    ElMessage.error(`读取工程失败: ${err instanceof Error ? err.message : String(err)}`)
+    // 桥中途掉线是常见原因：尝试重连一次后重试
+    if (isNetworkError(err)) {
+      await connect(true)
+      if (port.value) {
+        try {
+          project.value = await fetchProjectInfo(port.value)
+          candidates.value = []
+          selectedIds.value = []
+          resetPins()
+          return
+        } catch {
+          /* 交给下面的统一提示 */
+        }
+      }
+    }
+    ElMessage.error(`读取工程失败: ${bridgeErrorMessage(err, port.value)}`)
   } finally {
     loadingProject.value = false
   }
@@ -133,12 +167,25 @@ async function loadMcus() {
   if (!port.value) return
   loadingMcus.value = true
   try {
-    candidates.value = await findMcuCandidates(port.value)
-    selectedCandidate.value = null
+    const all = await findMcuCandidates(port.value)
+    let selected: string[] = []
+    try {
+      selected = await getSelectedPrimitiveIds(port.value, selectedWindowId.value || undefined)
+    } catch {
+      /* 读取选中失败不影响候选列表 */
+    }
+    selectedIds.value = selected
+    const { list, preferred } = prioritizeSelectedCandidates(all, selected)
+    candidates.value = list
+    selectedCandidate.value = preferred
     resetPins()
-    if (candidates.value.length === 0) ElMessage.warning('当前原理图中未识别到 MCU 器件')
+    if (candidates.value.length === 0) {
+      ElMessage.warning('当前原理图中未识别到 MCU 器件')
+    } else if (preferred) {
+      ElMessage.success(`已优先选中 EDA 中鼠标选中的 ${preferred.designator}（${preferred.symbolName}）`)
+    }
   } catch (err) {
-    ElMessage.error(`扫描器件失败: ${err instanceof Error ? err.message : String(err)}`)
+    ElMessage.error(`扫描器件失败: ${bridgeErrorMessage(err, port.value)}`)
   } finally {
     loadingMcus.value = false
   }
@@ -191,7 +238,7 @@ async function loadPinMap() {
       matchMap.value = map
     }
   } catch (err) {
-    ElMessage.error(`读取引脚失败: ${err instanceof Error ? err.message : String(err)}`)
+    ElMessage.error(`读取引脚失败: ${bridgeErrorMessage(err, port.value)}`)
   } finally {
     loadingPins.value = false
   }
@@ -243,6 +290,10 @@ function closeText(name: string): string {
   }
   return ''
 }
+
+onMounted(() => {
+  void connect(true)
+})
 </script>
 
 <template>
@@ -264,6 +315,24 @@ function closeText(name: string): string {
           <el-button size="small" :disabled="!port" @click="refreshWindows">刷新窗口</el-button>
           <span class="hint">需先启动 bridge-server.mjs，并安装 run-api-gateway 扩展</span>
         </div>
+        <el-alert
+          v-if="!port"
+          type="info"
+          :closable="false"
+          show-icon
+          title="未检测到本地桥"
+          description="请先在终端运行 npm run jlc:bridge（或 npm run dev:all 一键启动），并确保 EDA 已安装 run-api-gateway 扩展。"
+          style="margin-top: 8px"
+        />
+        <el-alert
+          v-else-if="!health?.edaConnected"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="桥已启动但 EDA 未连接"
+          description="请在 EDA 顶部菜单 API Gateway → 重新连接；若仍失败，检查扩展管理器已勾选“允许外部交互”。"
+          style="margin-top: 8px"
+        />
         <div v-if="windows.length" class="row">
           <span class="label">EDA 窗口</span>
           <el-radio-group :model-value="selectedWindowId" size="small" @change="onWindowChange">
@@ -310,6 +379,17 @@ function closeText(name: string): string {
         >
           <el-table-column prop="designator" label="位号" width="80" />
           <el-table-column prop="symbolName" label="符号 / 型号" />
+          <el-table-column label="来源" width="110">
+            <template #default="{ row }">
+              <el-tag
+                v-if="selectedIds.includes(row.primitiveId)"
+                type="warning"
+                size="small"
+              >
+                EDA 已选中
+              </el-tag>
+            </template>
+          </el-table-column>
         </el-table>
         <div v-if="selectedCandidate" class="row" style="margin-top: 8px">
           <el-button

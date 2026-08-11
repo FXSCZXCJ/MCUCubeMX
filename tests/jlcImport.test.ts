@@ -5,6 +5,7 @@ import {
   classifyEdaPin,
   matchDeviceIdBySymbol,
   normalizeEdaPinName,
+  prioritizeSelectedCandidates,
   stripEdaPinSuffix,
 } from '../src/lib/jlc/import'
 import type { EdaPinInfo } from '../src/lib/jlc/types'
@@ -102,5 +103,32 @@ describe('导入计划构建', () => {
       { number: '2', name: 'PA1', x: 0, y: 0, net: 'B' },
     ])
     expect(dup.matched).toHaveLength(1)
+  })
+})
+
+describe('MCU 候选优先选中', () => {
+  const candidates = [
+    { primitiveId: 'e36', designator: 'U1', name: '', symbolName: 'STM32F103C8T6', symbolUuid: '' },
+    { primitiveId: 'e999', designator: 'U2', name: '', symbolName: 'BME280', symbolUuid: '' },
+    { primitiveId: 'e123', designator: 'U3', name: '', symbolName: 'MPU-6050', symbolUuid: '' },
+  ]
+
+  it('鼠标选中的器件排最前并成为首选', () => {
+    const { list, preferred } = prioritizeSelectedCandidates(candidates, ['e999'])
+    expect(list[0].primitiveId).toBe('e999')
+    expect(preferred?.primitiveId).toBe('e999')
+  })
+
+  it('没有选中时保持原顺序且无首选', () => {
+    const { list, preferred } = prioritizeSelectedCandidates(candidates, [])
+    expect(list.map((c) => c.primitiveId)).toEqual(['e36', 'e999', 'e123'])
+    expect(preferred).toBeNull()
+  })
+
+  it('选中多个时按原相对顺序排在前面', () => {
+    const { list, preferred } = prioritizeSelectedCandidates(candidates, ['e123', 'e36'])
+    expect(list[0].primitiveId).toBe('e36')
+    expect(list[1].primitiveId).toBe('e123')
+    expect(preferred?.primitiveId).toBe('e36')
   })
 })

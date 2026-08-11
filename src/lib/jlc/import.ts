@@ -88,3 +88,15 @@ export function buildImportPlan(device: DeviceData, pins: EdaPinInfo[]): ImportP
 
   return { deviceId: device.id, matched, skipped }
 }
+
+/** 把 EDA 中鼠标选中的器件排到候选列表最前，返回排序后的列表与首选器件 */
+export function prioritizeSelectedCandidates<T extends { primitiveId: string }>(
+  candidates: T[],
+  selectedIds: string[],
+): { list: T[]; preferred: T | null } {
+  const selectedSet = new Set(selectedIds)
+  const list = [...candidates].sort(
+    (a, b) => Number(selectedSet.has(b.primitiveId)) - Number(selectedSet.has(a.primitiveId)),
+  )
+  return { list, preferred: list.find((c) => selectedSet.has(c.primitiveId)) ?? null }
+}

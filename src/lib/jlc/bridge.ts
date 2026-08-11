@@ -127,6 +127,18 @@ return out;`
   )
 }
 
+/** 读取原理图当前鼠标选中的图元 ID（含 MCU 器件本体） */
+export async function getSelectedPrimitiveIds(
+  port: number,
+  windowId?: string,
+): Promise<string[]> {
+  const code = `
+const ids = await eda.sch_SelectControl.getAllSelectedPrimitives_PrimitiveId();
+return Array.isArray(ids) ? ids : [];`
+  const ids = await execute<string[]>(port, code, windowId)
+  return Array.isArray(ids) ? ids : []
+}
+
 export async function fetchMcuPinMap(
   port: number,
   primitiveId: string,
