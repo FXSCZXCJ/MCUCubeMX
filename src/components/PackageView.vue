@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import {
   PIN_COLORS,
   normalizeRotation,
@@ -8,6 +9,7 @@ import {
   pinGeometry,
   type PinState,
 } from '../lib/packageSvg'
+import { downloadBlob } from '../lib/codegen'
 import { useProjectStore } from '../stores/project'
 import type { PinDef } from '../types'
 
@@ -25,6 +27,7 @@ const hoverPos = ref<{ x: number; y: number } | null>(null)
 
 const MIN_ZOOM = 0.4
 const MAX_ZOOM = 2.5
+const EXPORT_SCALE = 2
 // 面板内固定占用：工具栏 + 图例 + 间距 + 底部边距（用于按可用高度自适应）
 const CHROME_HEIGHT = 86
 
@@ -172,6 +175,61 @@ function onPinLeave() {
   hoverPos.value = null
 }
 
+/** 序列化当前封装图 SVG（保留旋转与文字反向补偿样式），用于导出 */
+function buildExportSvg(): string {
+  const svg = svgRef.value
+  if (!svg) return ''
+  const clone = svg.cloneNode(true) as SVGSVGElement
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+  const style = document.createElementNS('http://www.w3.org/2000/svg', 'style')
+  style.textContent = '.pin-text{transform-box:fill-box;transform-origin:center;}'
+  clone.insertBefore(style, clone.firstChild)
+  const size = geo.value.svgSize * EXPORT_SCALE
+  clone.setAttribute('width', String(size))
+  clone.setAttribute('height', String(size))
+  return new XMLSerializer().serializeToString(clone)
+}
+
+function exportSvg() {
+  const str = buildExportSvg()
+  if (!str) return
+  downloadBlob(
+    new Blob([str], { type: 'image/svg+xml' }),
+    `${store.projectName || 'device'}-${device.value.device}.svg`,
+  )
+  ElMessage.success('SVG 已导出')
+}
+
+function exportPng() {
+  const str = buildExportSvg()
+  if (!str) return
+  const size = geo.value.svgSize * EXPORT_SCALE
+  const img = new Image()
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      ElMessage.error('无法创建画布')
+      return
+    }
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, size, size)
+    ctx.drawImage(img, 0, 0, size, size)
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        ElMessage.error('PNG 生成失败')
+        return
+      }
+      downloadBlob(blob, `${store.projectName || 'device'}-${device.value.device}.png`)
+      ElMessage.success('PNG 已导出')
+    }, 'image/png')
+  }
+  img.onerror = () => ElMessage.error('SVG 渲染失败，无法导出 PNG')
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(str)}`
+}
+
 const LEGEND_LABELS: Record<string, string> = {
   unassigned: '未配置',
   output: '输出',
@@ -221,6 +279,8 @@ function displayLabel(pin: PinDef): string | undefined {
         <el-button size="small" title="复位旋转" @click="rotateBy(360 - rotation)">复位</el-button>
         <el-button size="small" title="顺时针旋转 45°" @click="rotateBy(45)">⟳45°</el-button>
       </el-button-group>
+      <el-button size="small" @click="exportSvg">导出 SVG</el-button>
+      <el-button size="small" @click="exportPng">导出 PNG</el-button>
     </div>
     <div class="package-stage">
       <svg
