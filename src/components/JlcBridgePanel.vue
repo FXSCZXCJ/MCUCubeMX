@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useProjectStore } from '../stores/project'
 import { getDeviceData, deviceIds } from '../data/device'
@@ -39,8 +39,14 @@ import type {
 } from '../lib/jlc/types'
 import type { PinAssignment } from '../types'
 
-defineProps<{ modelValue: boolean }>()
-const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
+const props = defineProps<{
+  modelValue: boolean
+  pendingAction?: 'sync' | 'import' | null
+}>()
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  'action-consumed': []
+}>()
 
 const store = useProjectStore()
 
@@ -333,6 +339,35 @@ async function oneClickSync() {
   }
 }
 
+let setupPromise: Promise<boolean> | null = null
+
+/** 保证只跑一次完整准备链路，后续动作复用其结果 */
+function ensureSetup(): Promise<boolean> {
+  if (!setupPromise) {
+    setupPromise = autoSetup().finally(() => {
+      setupPromise = null
+    })
+  }
+  return setupPromise
+}
+
+watch(
+  () => props.pendingAction,
+  (action) => {
+    if (!action) return
+    void (async () => {
+      await ensureSetup()
+      if (action === 'sync') {
+        await oneClickSync()
+      } else {
+        applyPlan()
+      }
+      emit('action-consumed')
+    })()
+  },
+  { immediate: true },
+)
+
 function importAssignments(): PinAssignment[] {
   return (plan.value?.matched ?? []).map((item) => ({
     pin: item.canonical,
@@ -413,7 +448,7 @@ function closeText(name: string): string {
 }
 
 onMounted(() => {
-  void autoSetup()
+  void ensureSetup()
 })
 </script>
 
