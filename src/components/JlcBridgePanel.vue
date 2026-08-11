@@ -442,7 +442,7 @@ async function confirmExport() {
     )
     const fail = result.failed.length ? `，失败 ${result.failed.length}` : ''
     ElMessage.success(
-      `同步完成：更新端口 ${result.updated}、改线段网络 ${result.renamed}、新增端口 ${result.placed}${fail}`,
+      `同步完成：更新端口 ${result.updated}、更换端口 ${result.replaced}、改线段网络 ${result.renamed}、新增端口 ${result.placed}${fail}`,
     )
     exportPreview.value = null
     await loadPinMap()
@@ -463,6 +463,7 @@ function closeText(name: string): string {
 
 const actionLabels: Record<string, string> = {
   'update-port': '更新端口',
+  'replace-port': '更换端口',
   'rename-wire': '改线段网络',
   'place-port': '新增端口',
 }
@@ -739,7 +740,7 @@ onMounted(() => {
         type="warning"
         :closable="false"
         show-icon
-        title="按引脚现有连接方式同步：已连端口→更新端口；线段→改线段网络；未连→新增 IN/OUT 端口"
+        title="按引脚现有连接方式同步：端口方向不符→删除重放；线段→改线段网络；未连→新增 IN/OUT 端口"
         :description="`跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
         style="margin-bottom: 8px"
       />
@@ -748,7 +749,18 @@ onMounted(() => {
         <el-table-column prop="edaName" label="EDA 引脚" width="150" />
         <el-table-column label="操作" width="100">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.action === 'update-port' ? 'warning' : row.action === 'rename-wire' ? 'primary' : 'success'">
+            <el-tag
+              size="small"
+              :type="
+                row.action === 'replace-port'
+                  ? 'danger'
+                  : row.action === 'update-port'
+                    ? 'warning'
+                    : row.action === 'rename-wire'
+                      ? 'primary'
+                      : 'success'
+              "
+            >
               {{ actionText(row.action) }}
             </el-tag>
           </template>

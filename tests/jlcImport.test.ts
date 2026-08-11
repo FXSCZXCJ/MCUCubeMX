@@ -266,7 +266,7 @@ describe('导出到 EDA 计划构建', () => {
     const plan = buildExportPlan(
       gd32,
       [{ pin: 'PA6', label: 'NEW', mode: 'INPUT', params: {} }],
-      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'OLD', conn: 'port', portId: 'p1', portNet: 'OLD' }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'OLD', conn: 'port', portId: 'p1', portNet: 'OLD', portDir: 'IN' }],
     )
     expect(plan.changes[0]).toMatchObject({
       action: 'update-port',
@@ -280,9 +280,44 @@ describe('导出到 EDA 计划构建', () => {
     const plan = buildExportPlan(
       gd32,
       [{ pin: 'PA6', label: 'SAME', mode: 'INPUT', params: {} }],
-      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'SAME', conn: 'port', portId: 'p1', portNet: 'SAME' }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'SAME', conn: 'port', portId: 'p1', portNet: 'SAME', portDir: 'IN' }],
     )
     expect(plan.kept.map((c) => c.pin)).toEqual(['PA6'])
     expect(plan.changes).toHaveLength(0)
+  })
+
+  it('端口方向不符时删除并重新放置', () => {
+    const plan = buildExportPlan(
+      gd32,
+      [{ pin: 'PA6', label: 'LED_R', mode: 'OUTPUT', params: {} }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'OLD', conn: 'port', portId: 'p1', portNet: 'OLD', portDir: 'IN' }],
+    )
+    expect(plan.changes[0]).toMatchObject({
+      action: 'replace-port',
+      portId: 'p1',
+      oldNet: 'OLD',
+      newNet: 'LED_R',
+      mode: 'OUTPUT',
+      rotation: 0,
+    })
+  })
+
+  it('网络名相同但端口方向不符也要更换', () => {
+    const plan = buildExportPlan(
+      gd32,
+      [{ pin: 'PA6', label: 'SAME', mode: 'INPUT', params: {} }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'SAME', conn: 'port', portId: 'p1', portNet: 'SAME', portDir: 'OUT' }],
+    )
+    expect(plan.changes.map((c) => c.action)).toEqual(['replace-port'])
+    expect(plan.kept).toHaveLength(0)
+  })
+
+  it('电源符号（无方向概念）只改名不替换', () => {
+    const plan = buildExportPlan(
+      gd32,
+      [{ pin: 'PA6', label: '3V3', mode: 'OUTPUT', params: {} }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: '3V3', conn: 'port', portId: 'p1', portNet: '3V3', portDir: null }],
+    )
+    expect(plan.kept.map((c) => c.pin)).toEqual(['PA6'])
   })
 })

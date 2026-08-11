@@ -45,6 +45,8 @@ export interface EdaPinInfo {
   portId?: string | null
   /** 网络端口当前网络名（conn=port 时） */
   portNet?: string | null
+  /** 网络端口方向（Netport-IN→IN / Netport-OUT→OUT；电源/地符号为 null） */
+  portDir?: string | null
 }
 
 export interface McuPinMap {
@@ -96,8 +98,8 @@ export interface ExportChangeItem {
   newNet: string
   status: ExportChangeStatus
   skipReason?: string
-  /** 同步动作：更新端口 / 改线段网络 / 新增端口 */
-  action?: 'update-port' | 'rename-wire' | 'place-port'
+  /** 同步动作：更新端口 / 更换端口 / 改线段网络 / 新增端口 */
+  action?: 'update-port' | 'replace-port' | 'rename-wire' | 'place-port'
   /** 命中网络端口的图元 ID（action=update-port 时） */
   portId?: string | null
   /** 输入/输出方向，决定放置 IN / OUT 网络端口 */
@@ -110,7 +112,7 @@ export interface ExportChangeItem {
 }
 
 export interface SyncAction {
-  action: 'update-port' | 'rename-wire' | 'place-port'
+  action: 'update-port' | 'replace-port' | 'rename-wire' | 'place-port'
   net: string
   x: number
   y: number
@@ -122,6 +124,7 @@ export interface SyncAction {
 
 export interface SyncResult {
   updated: number
+  replaced: number
   renamed: number
   placed: number
   failed: string[]

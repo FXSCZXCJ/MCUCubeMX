@@ -254,13 +254,33 @@ export function buildExportPlan(
     const conn = edaPin.conn ?? (oldNet ? 'wire' : 'none')
 
     if (conn === 'port') {
-      if (edaPin.portNet === assignment.label) {
+      const requiredDir = assignment.mode === 'OUTPUT' ? 'OUT' : 'IN'
+      const isNetPort = !!edaPin.portDir
+      const sameNet = edaPin.portNet === assignment.label
+      const sameDir = edaPin.portDir === requiredDir
+      if (sameNet && (!isNetPort || sameDir)) {
         items.push({
           pin: assignment.pin,
           edaName: edaPin.name,
-          oldNet: edaPin.portNet,
+          oldNet: edaPin.portNet ?? null,
           newNet: assignment.label,
           status: 'keep',
+        })
+        continue
+      }
+      if (isNetPort && !sameDir) {
+        items.push({
+          pin: assignment.pin,
+          edaName: edaPin.name,
+          oldNet: edaPin.portNet ?? null,
+          newNet: assignment.label,
+          status: 'change',
+          action: 'replace-port',
+          portId: edaPin.portId,
+          mode: assignment.mode,
+          x: edaPin.x,
+          y: edaPin.y,
+          rotation: edaPin.rotation ?? 0,
         })
         continue
       }

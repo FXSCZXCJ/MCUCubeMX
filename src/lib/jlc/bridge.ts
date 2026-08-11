@@ -183,6 +183,9 @@ for (const c of portComps || []) {
   if (!/netport|netflag|power|ground|voltage|^vcc|^vdd|^vss/i.test(symbolName)) continue;
   let other = {};
   try { other = (await c.getState_OtherProperty()) || {}; } catch {}
+  let dir = null;
+  const dirMatch = /^netport-([a-z0-9]+)/i.exec(symbolName);
+  if (dirMatch) dir = dirMatch[1].toUpperCase();
   let portPins = [];
   try { portPins = (await eda.sch_PrimitiveComponent.getAllPinsByPrimitiveId(c.primitiveId)) || []; } catch { continue; }
   for (const p of portPins) {
@@ -190,7 +193,7 @@ for (const c of portComps || []) {
     let py = 0;
     try { px = await p.getState_X(); } catch {}
     try { py = await p.getState_Y(); } catch {}
-    portList.push({ id: c.primitiveId, x: px, y: py, net: other['Global Net Name'] || other['Net'] || '' });
+    portList.push({ id: c.primitiveId, x: px, y: py, net: other['Global Net Name'] || other['Net'] || '', dir });
   }
 }
 const result = [];
@@ -204,11 +207,13 @@ for (const p of pins || []) {
   let conn = 'none';
   let portId = null;
   let portNet = null;
+  let portDir = null;
   for (const pt of portList) {
     if (Math.abs(pt.x - x) < 1e-6 && Math.abs(pt.y - y) < 1e-6) {
       conn = 'port';
       portId = pt.id;
       portNet = pt.net || null;
+      portDir = pt.dir || null;
       break;
     }
   }
@@ -234,6 +239,7 @@ for (const p of pins || []) {
     conn,
     portId,
     portNet,
+    portDir,
   });
 }
 return { componentId: '${primitiveId}', designator, symbolName, name: nameAttr, componentName, pins: result };`
@@ -263,10 +269,11 @@ export async function applySyncActions(
   actions: SyncAction[],
   windowId?: string,
 ): Promise<SyncResult> {
-  if (actions.length === 0) return { updated: 0, renamed: 0, placed: 0, failed: [] }
+  if (actions.length === 0) return { updated: 0, replaced: 0, renamed: 0, placed: 0, failed: [] }
   const code = `
 const actions = ${JSON.stringify(actions)};
 let updated = 0;
+let replaced = 0;
 let renamed = 0;
 let placed = 0;
 const failures = [];
@@ -284,6 +291,15 @@ for (const a of actions.filter((x) => x.action === 'update-port')) {
     updated++;
   } catch (err) {
     failures.push('更新端口 ' + a.net + ': ' + (err && err.message));
+  }
+}
+for (const a of actions.filter((x) => x.action === 'replace-port')) {
+  try {
+    await eda.sch_PrimitiveComponent.delete(a.portId);
+    await eda.sch_PrimitiveComponent.createNetPort(a.direction, a.net, a.x, a.y, a.rotation || 0, false);
+    replaced++;
+  } catch (err) {
+    failures.push('更换端口 ' + a.net + ': ' + (err && err.message));
   }
 }
 const wires = await eda.sch_PrimitiveWire.getAll();
@@ -313,6 +329,6 @@ for (const a of actions.filter((x) => x.action === 'place-port')) {
     failures.push('新增端口 ' + a.net + ': ' + (err && err.message));
   }
 }
-return { updated, renamed, placed, failures };`
+return { updated, replaced, renamed, placed, failures };`
   return execute<SyncResult>(port, code, windowId)
 }
