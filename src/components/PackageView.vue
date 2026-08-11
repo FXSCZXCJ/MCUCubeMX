@@ -38,6 +38,17 @@ const pins = computed(() =>
     selected: store.selectedPin === pin.name,
   })),
 )
+
+const LEGEND_LABELS: Record<string, string> = {
+  unassigned: '未配置',
+  output: '输出',
+  input: '输入',
+  exti: '外部中断',
+  conflict: '冲突',
+  power: '电源',
+  special: '特殊引脚',
+  selected: '选中',
+}
 </script>
 
 <template>
@@ -127,9 +138,14 @@ const pins = computed(() =>
     </div>
 
     <div class="legend">
-      <span v-for="(color, key) in PIN_COLORS" :key="key" class="legend-item">
+      <span
+        v-for="(color, key) in PIN_COLORS"
+        :key="key"
+        class="legend-item"
+        :title="key"
+      >
         <i :style="{ background: color.fill, borderColor: color.stroke }" />
-        <em>{{ key }}</em>
+        <em>{{ LEGEND_LABELS[key] ?? key }}</em>
       </span>
     </div>
   </div>
@@ -182,6 +198,7 @@ const pins = computed(() =>
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  cursor: help;
 }
 .legend-item i {
   width: 12px;
