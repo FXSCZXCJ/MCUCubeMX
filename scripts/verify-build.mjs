@@ -24,7 +24,7 @@ function die(msg) {
 const defaultDirs = {
   GD32L233RCT6:
     process.env.GD32L23X_FIRMWARE_DIR ||
-    'D:\\Project\\GD32_Project\\TX_RTOS\\GD32L23x_Firmware_Library_V2.4.0\\Firmware',
+    path.join(os.homedir(), 'GD32L23x_Firmware_Library_V2.4.0', 'Firmware'),
   GD32F427VE:
     process.env.GD32F4XX_FIRMWARE_DIR ||
     path.join(os.tmpdir(), 'hal_gigadevice', 'gd32f4xx'),
