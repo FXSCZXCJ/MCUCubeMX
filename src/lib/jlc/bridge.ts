@@ -205,3 +205,36 @@ return { componentId: '${primitiveId}', designator, symbolName, name: nameAttr, 
     }),
   }
 }
+
+/** 把指定网络名整体重命名为新网络名（作用于当前图页所有同名导线） */
+export async function applyNetRenames(
+  port: number,
+  renames: { from: string; to: string }[],
+  windowId?: string,
+): Promise<number> {
+  if (renames.length === 0) return 0
+  const code = `
+const renames = ${JSON.stringify(renames)};
+const wires = await eda.sch_PrimitiveWire.getAll();
+const byNet = {};
+for (const w of wires || []) {
+  let net = null;
+  try { net = await w.getState_Net(); } catch {}
+  if (!net) continue;
+  (byNet[net] = byNet[net] || []).push(w);
+}
+let count = 0;
+for (const r of renames) {
+  const list = byNet[r.from] || [];
+  for (const w of list) {
+    try {
+      const aw = w.toAsync ? w.toAsync() : w;
+      aw.setState_Net(r.to);
+      await aw.done();
+      count++;
+    } catch {}
+  }
+}
+return count;`
+  return execute<number>(port, code, windowId)
+}

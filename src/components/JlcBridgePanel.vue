@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { useProjectStore } from '../stores/project'
 import { getDeviceData, deviceIds } from '../data/device'
 import {
+  applyNetRenames,
   fetchMcuPinMap,
   fetchProjectInfo,
   findMcuCandidates,
@@ -13,6 +14,8 @@ import {
   selectEdaWindow,
 } from '../lib/jlc/bridge'
 import {
+  buildExportPlan,
+  buildImportDiff,
   buildImportPlan,
   classifyEdaPin,
   matchDeviceIdBySymbol,
@@ -25,6 +28,9 @@ import type {
   EdaComponentInfo,
   EdaProjectInfo,
   EdaWindow,
+  ExportPlan,
+  ImportDiffItem,
+  ImportChangeKind,
   ImportPlan,
   McuPinMap,
 } from '../lib/jlc/types'
@@ -47,6 +53,9 @@ const selectedCandidate = ref<EdaComponentInfo | null>(null)
 const pinMap = ref<McuPinMap | null>(null)
 const plan = ref<ImportPlan | null>(null)
 const matchMap = ref<Record<string, string>>({})
+const importPreview = ref<ImportDiffItem[] | null>(null)
+const exportPreview = ref<ExportPlan | null>(null)
+const exporting = ref(false)
 const loadingProject = ref(false)
 const loadingMcus = ref(false)
 const loadingPins = ref(false)
@@ -74,6 +83,17 @@ const statusText = computed(() => {
   if (port.value) return `桥已找到但 EDA 未连接 (端口 ${port.value})`
   return '未连接'
 })
+
+const kindLabels: Record<ImportChangeKind, string> = {
+  add: '新增',
+  change: '修改',
+  keep: '不变',
+  remove: '移除',
+}
+
+function kindText(kind: string): string {
+  return kindLabels[kind as ImportChangeKind] ?? kind
+}
 
 function isNetworkError(err: unknown): boolean {
   return (
@@ -267,28 +287,60 @@ function importAssignments(): PinAssignment[] {
   }))
 }
 
-async function applyPlan() {
+function applyPlan() {
   if (!plan.value || !supportedDeviceId.value) return
-  const count = plan.value.matched.length
-  if (count === 0) {
+  if (plan.value.matched.length === 0) {
     ElMessage.warning('没有可导入的引脚')
     return
   }
-  try {
-    await ElMessageBox.confirm(
-      `将导入 ${count} 个引脚（网络名作为标签，默认输入模式，可稍后调整）。\n当前已有配置会被替换，是否继续？`,
-      '确认导入',
-      { type: 'warning' },
-    )
-  } catch {
-    return
-  }
+  importPreview.value = buildImportDiff(store.assignments, plan.value)
+}
+
+function confirmImport() {
+  if (!plan.value || !importPreview.value) return
+  const added = importPreview.value.filter((i) => i.kind === 'add').length
+  const changed = importPreview.value.filter((i) => i.kind === 'change').length
+  const removed = importPreview.value.filter((i) => i.kind === 'remove').length
   if (store.projectName === 'untitled' && project.value?.name) {
     store.projectName = project.value.name
   }
   store.applyImport(plan.value.deviceId, importAssignments())
-  ElMessage.success(`已导入 ${count} 个引脚配置`)
+  importPreview.value = null
+  ElMessage.success(
+    `已导入 ${plan.value.matched.length} 个引脚（新增 ${added}、修改 ${changed}、移除 ${removed}）`,
+  )
   close()
+}
+
+function prepareExport() {
+  if (!port.value || !pinMap.value || !supportedDeviceId.value) return
+  const device = getDeviceData(supportedDeviceId.value)
+  exportPreview.value = buildExportPlan(device, store.config.pins, pinMap.value.pins)
+}
+
+async function confirmExport() {
+  if (!port.value || !exportPreview.value) return
+  const changes = exportPreview.value.changes
+  if (changes.length === 0) {
+    ElMessage.info('没有需要同步的网络变更')
+    exportPreview.value = null
+    return
+  }
+  exporting.value = true
+  try {
+    const count = await applyNetRenames(
+      port.value,
+      changes.map((c) => ({ from: c.oldNet!, to: c.newNet })),
+      selectedWindowId.value || undefined,
+    )
+    ElMessage.success(`已同步 ${count} 条网络到 EDA`)
+    exportPreview.value = null
+    await loadPinMap()
+  } catch (err) {
+    ElMessage.error(`同步失败: ${bridgeErrorMessage(err, port.value)}`)
+  } finally {
+    exporting.value = false
+  }
 }
 
 function closeText(name: string): string {
@@ -434,6 +486,16 @@ onMounted(() => {
           >
             导入到工程（{{ plan?.matched.length ?? 0 }}）
           </el-button>
+          <el-button
+            size="small"
+            type="warning"
+            plain
+            :disabled="!supportedDeviceId || store.assignedCount === 0"
+            :loading="exporting"
+            @click="prepareExport"
+          >
+            同步到 EDA
+          </el-button>
         </div>
         <el-alert
           v-if="!supportedDeviceId"
@@ -481,6 +543,105 @@ onMounted(() => {
         </div>
       </section>
     </div>
+  </el-dialog>
+
+  <el-dialog
+    :model-value="!!importPreview"
+    title="确认导入（变更对比）"
+    width="720px"
+    top="8vh"
+    @close="importPreview = null"
+  >
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      title="导入将整体替换当前引脚配置，网络名作为标签，默认输入模式"
+      style="margin-bottom: 8px"
+    />
+    <el-table :data="importPreview ?? []" size="small" max-height="320">
+      <el-table-column prop="pin" label="引脚" width="90" />
+      <el-table-column label="类型" width="80">
+        <template #default="{ row }">
+          <el-tag
+            size="small"
+            :type="
+              row.kind === 'remove'
+                ? 'danger'
+                : row.kind === 'change'
+                  ? 'warning'
+                  : row.kind === 'add'
+                    ? 'success'
+                    : 'info'
+            "
+          >
+            {{ kindText(row.kind) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="当前">
+        <template #default="{ row }">
+          {{ row.oldLabel || '—' }}
+          <span v-if="row.oldMode" class="sub">· {{ row.oldMode }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="导入后">
+        <template #default="{ row }">
+          <span class="match">{{ row.newLabel || '—' }}</span>
+          <span v-if="row.newMode" class="sub">· {{ row.newMode }}</span>
+        </template>
+      </el-table-column>
+    </el-table>
+    <template #footer>
+      <el-button @click="importPreview = null">取消</el-button>
+      <el-button type="primary" @click="confirmImport">确认导入</el-button>
+    </template>
+  </el-dialog>
+
+  <el-dialog
+    :model-value="!!exportPreview"
+    title="确认同步到 EDA（变更对比）"
+    width="720px"
+    top="8vh"
+    @close="exportPreview = null"
+  >
+    <template v-if="exportPreview">
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        title="将把标签作为网络名，重命名原理图中对应网络（仅当前打开的图页）"
+        :description="`未连线引脚、未设置标签、网络重命名交叉的项会被跳过（共 ${exportPreview.skipped.length} 条）。`"
+        style="margin-bottom: 8px"
+      />
+      <el-table :data="exportPreview.changes" size="small" max-height="280">
+        <el-table-column prop="pin" label="引脚" width="90" />
+        <el-table-column prop="edaName" label="EDA 引脚" width="150" />
+        <el-table-column label="当前网络">
+          <template #default="{ row }">{{ row.oldNet }}</template>
+        </el-table-column>
+        <el-table-column label="目标网络">
+          <template #default="{ row }">
+            <span class="match">{{ row.newNet }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="summary">
+        将重命名 {{ exportPreview.changes.length }} 条网络；{{ exportPreview.kept.length }} 条无需改动；
+        跳过 {{ exportPreview.skipped.length }} 条。
+      </div>
+    </template>
+    <template #footer>
+      <el-button @click="exportPreview = null">取消</el-button>
+      <el-button
+        type="warning"
+        :loading="exporting"
+        :disabled="!exportPreview || exportPreview.changes.length === 0"
+        @click="confirmExport"
+      >
+        执行同步
+      </el-button>
+    </template>
   </el-dialog>
 </template>
 

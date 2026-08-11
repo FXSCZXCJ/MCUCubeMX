@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { devices, deviceIds } from '../src/data/device'
 import {
+  buildExportPlan,
+  buildImportDiff,
   buildImportPlan,
   classifyEdaPin,
   matchDeviceIdBySymbol,
@@ -11,6 +13,7 @@ import {
   stripPartSuffix,
 } from '../src/lib/jlc/import'
 import type { EdaPinInfo } from '../src/lib/jlc/types'
+import type { PinAssignment } from '../src/types'
 
 const gd32 = devices['GD32L233RCT6']
 
@@ -169,5 +172,75 @@ describe('MCU 候选优先选中', () => {
     expect(list[0].primitiveId).toBe('e36')
     expect(list[1].primitiveId).toBe('e123')
     expect(preferred?.primitiveId).toBe('e36')
+  })
+})
+
+describe('导入变更对比', () => {
+  const current: Record<string, PinAssignment> = {
+    PA0: { pin: 'PA0', label: 'LED', mode: 'OUTPUT', params: {} },
+    PA1: { pin: 'PA1', label: 'SDA', mode: 'INPUT', params: {} },
+    PA2: { pin: 'PA2', label: 'OLD', mode: 'INPUT', params: {} },
+  }
+  const plan = {
+    deviceId: 'GD32L233RCT6',
+    matched: [
+      { canonical: 'PA0', edaName: 'PA0-WKUP', net: 'ADC' },
+      { canonical: 'PA1', edaName: 'PA1', net: 'SDA' },
+      { canonical: 'PA5', edaName: 'PA5', net: 'LED_R' },
+    ],
+    skipped: [],
+  }
+
+  it('区分新增/修改/不变/移除', () => {
+    const diff = buildImportDiff(current, plan)
+    const byPin = new Map(diff.map((d) => [d.pin, d.kind]))
+    expect(byPin.get('PA0')).toBe('change')
+    expect(byPin.get('PA1')).toBe('keep')
+    expect(byPin.get('PA5')).toBe('add')
+    expect(byPin.get('PA2')).toBe('remove')
+  })
+
+  it('变更项带新旧标签', () => {
+    const diff = buildImportDiff(current, plan)
+    const pa0 = diff.find((d) => d.pin === 'PA0')
+    expect(pa0).toMatchObject({ oldLabel: 'LED', newLabel: 'ADC', oldMode: 'OUTPUT', newMode: 'INPUT' })
+  })
+})
+
+describe('导出到 EDA 计划构建', () => {
+  const gd32 = devices['GD32L233RCT6']
+  const assignments: PinAssignment[] = [
+    { pin: 'PA0', label: 'ADC', mode: 'INPUT', params: {} },
+    { pin: 'PA1', label: 'SDA', mode: 'INPUT', params: {} },
+    { pin: 'PA5', label: 'LED_R', mode: 'INPUT', params: {} },
+    { pin: 'PA2', label: '', mode: 'INPUT', params: {} },
+    { pin: 'PB2', label: 'BOOT', mode: 'INPUT', params: {} },
+    { pin: 'PA3', label: 'X', mode: 'INPUT', params: {} },
+  ]
+  const pinMap: EdaPinInfo[] = [
+    { number: '1', name: 'PA0-WKUP', x: 0, y: 0, net: 'ADC' },
+    { number: '2', name: 'PA1', x: 0, y: 0, net: 'INT' },
+    { number: '3', name: 'PA5', x: 0, y: 0, net: null },
+  ]
+
+  it('只生成有变化的网络重命名，其余按原因跳过', () => {
+    const plan = buildExportPlan(gd32, assignments, pinMap)
+    expect(plan.changes.map((c) => c.pin)).toEqual(['PA1'])
+    expect(plan.changes[0]).toMatchObject({ oldNet: 'INT', newNet: 'SDA' })
+    expect(plan.kept.map((c) => c.pin)).toEqual(['PA0'])
+    const skippedReason = new Map(plan.skipped.map((s) => [s.pin, s.skipReason]))
+    expect(skippedReason.get('PA5')).toContain('未连线')
+    expect(skippedReason.get('PA2')).toContain('未设置标签')
+    expect(skippedReason.get('PB2')).toContain('特殊引脚')
+    expect(skippedReason.get('PA3')).toContain('未找到')
+  })
+
+  it('网络重命名交叉时跳过冲突项', () => {
+    const plan = buildExportPlan(gd32, [
+      { pin: 'PA1', label: 'ADC', mode: 'INPUT', params: {} },
+      { pin: 'PA0', label: 'LED_R', mode: 'INPUT', params: {} },
+    ], pinMap)
+    expect(plan.changes.map((c) => c.pin)).toEqual(['PA0'])
+    expect(plan.skipped.find((s) => s.pin === 'PA1')?.skipReason).toContain('交叉')
   })
 })

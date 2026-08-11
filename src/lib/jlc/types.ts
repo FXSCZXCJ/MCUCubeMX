@@ -67,3 +67,32 @@ export interface ImportPlan {
   matched: ImportPlanItem[]
   skipped: ImportSkipItem[]
 }
+
+export type ImportChangeKind = 'add' | 'change' | 'keep' | 'remove'
+
+export interface ImportDiffItem {
+  pin: string
+  kind: ImportChangeKind
+  oldLabel?: string
+  newLabel?: string
+  oldMode?: string
+  newMode?: string
+}
+
+export type ExportChangeStatus = 'change' | 'keep' | 'skip'
+
+export interface ExportChangeItem {
+  pin: string
+  edaName: string
+  oldNet: string | null
+  newNet: string
+  status: ExportChangeStatus
+  skipReason?: string
+}
+
+export interface ExportPlan {
+  deviceId: string
+  changes: ExportChangeItem[]
+  kept: ExportChangeItem[]
+  skipped: ExportChangeItem[]
+}
