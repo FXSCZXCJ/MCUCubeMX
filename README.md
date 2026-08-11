@@ -9,6 +9,10 @@
 - **GD32L233RCT6**：LQFP64、256KB Flash、32KB SRAM、Cortex-M23 @64MHz（GD32L23x 标准外设库）
 - **GD32F427VE**：LQFP100、512KB Flash、256KB SRAM、Cortex-M4 @200MHz（GD32F4xx 标准外设库）
 
+## 效果图
+
+![MCUCubeMX 效果图](docs/images/app-screenshot.png)
+
 ## 功能特性
 
 ### 封装图
