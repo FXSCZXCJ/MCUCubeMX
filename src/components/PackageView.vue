@@ -22,6 +22,8 @@ const autoFit = ref(true)
 const manualFactor = ref(1)
 const autoZoom = ref(1)
 const rotation = ref(0)
+const bboxW = ref(geo.value.svgSize)
+const bboxH = ref(geo.value.svgSize)
 const hoverPin = ref<PinDef | null>(null)
 const hoverPos = ref<{ x: number; y: number } | null>(null)
 
@@ -65,6 +67,8 @@ function updateAutoZoom() {
   const s = Math.abs(Math.sin(rad))
   const rotW = w * c + h * s
   const rotH = w * s + h * c
+  bboxW.value = rotW
+  bboxH.value = rotH
   autoZoom.value = Math.min(
     MAX_ZOOM,
     Math.max(MIN_ZOOM, Math.min(width / rotW, availHeight / rotH)),
@@ -181,6 +185,10 @@ function buildExportSvg(): string {
   if (!svg) return ''
   const clone = svg.cloneNode(true) as SVGSVGElement
   clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+  // 独立导出时去掉“容器内居中”的 translate，仅保留旋转
+  if (clone.style.transform) {
+    clone.style.transform = clone.style.transform.replace(/translate\([^)]*\)\s*/g, '').trim()
+  }
   const style = document.createElementNS('http://www.w3.org/2000/svg', 'style')
   style.textContent = '.pin-text{transform-box:fill-box;transform-origin:center;}'
   clone.insertBefore(style, clone.firstChild)
@@ -283,14 +291,21 @@ function displayLabel(pin: PinDef): string | undefined {
       <el-button size="small" @click="exportPng">导出 PNG</el-button>
     </div>
     <div class="package-stage">
-      <svg
-        ref="svgRef"
-        :width="geo.svgSize * effectiveZoom"
-        :height="geo.svgSize * effectiveZoom"
-        :viewBox="`0 0 ${geo.svgSize} ${geo.svgSize}`"
-        :style="{ transform: `rotate(${rotation}deg)` }"
-        class="package-svg"
+      <div
+        class="package-rotator"
+        :style="{
+          width: `${bboxW * effectiveZoom}px`,
+          height: `${bboxH * effectiveZoom}px`,
+        }"
       >
+        <svg
+          ref="svgRef"
+          :width="geo.svgSize * effectiveZoom"
+          :height="geo.svgSize * effectiveZoom"
+          :viewBox="`0 0 ${geo.svgSize} ${geo.svgSize}`"
+          :style="{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }"
+          class="package-svg"
+        >
         <!-- 芯片本体 -->
         <rect
           :x="geo.margin"
@@ -378,7 +393,8 @@ function displayLabel(pin: PinDef): string | undefined {
             {{ displayLabel(item.pin) }}
           </text>
         </g>
-      </svg>
+        </svg>
+      </div>
 
       <div
         v-if="hoverPin && hoverPos"
@@ -456,11 +472,18 @@ function displayLabel(pin: PinDef): string | undefined {
   overflow: auto;
   display: flex;
   justify-content: center;
+  align-items: center;
   background: #ffffff;
   border-radius: 8px;
 }
-.package-svg {
+.package-rotator {
+  position: relative;
   flex: none;
+}
+.package-svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   transform-origin: center center;
   transition: transform 0.2s ease;
 }
