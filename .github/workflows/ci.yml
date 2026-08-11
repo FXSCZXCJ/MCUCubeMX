@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run validate:device
+      - run: npm run test
+      - run: npm run build
+      - run: npm run lint
+
+  # 编译验证需要 GD32L23x 固件库；本地执行: npm run verify:build
+  # （GD32L23X_FIRMWARE_DIR 指向 Firmware 目录）
+  verify-build:
+    runs-on: ubuntu-latest
+    if: ${{ vars.ENABLE_VERIFY_BUILD == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install ARM GCC
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+      - name: Fetch firmware library
+        run: |
+          curl -fsSL "${{ vars.GD32_FW_URL }}" -o fw.zip
+          mkdir -p firmware && unzip -q fw.zip -d firmware
+      - run: npm run verify:build
+        env:
+          GD32L23X_FIRMWARE_DIR: ${{ github.workspace }}/firmware

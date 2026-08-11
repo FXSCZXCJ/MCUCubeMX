@@ -1,0 +1,38 @@
+{
+  "name": "mcucubemx",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "validate:device": "node scripts/validate-device-data.mjs",
+    "verify:build": "node scripts/verify-build.mjs"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "element-plus": "^2.9.0",
+    "jszip": "^3.10.1",
+    "pinia": "^3.0.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@types/ejs": "^3.1.5",
+    "@types/node": "^22.10.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/eslint-config-prettier": "^10.1.0",
+    "@vue/eslint-config-typescript": "^14.2.0",
+    "eslint": "^9.17.0",
+    "eslint-plugin-vue": "^9.32.0",
+    "prettier": "^3.4.2",
+    "typescript": "~5.6.3",
+    "vite": "^6.0.7",
+    "vitest": "^3.0.2",
+    "vue-tsc": "^2.2.0"
+  }
+}

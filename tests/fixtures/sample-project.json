@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "device": "GD32L233RCT6",
+  "pins": [
+    {
+      "pin": "PA5",
+      "label": "LED_R",
+      "mode": "OUTPUT",
+      "params": {
+        "outputType": "PP",
+        "speed": "50",
+        "level": "HIGH",
+        "pull": "NONE",
+        "exti": { "enabled": false, "edge": "FALLING" }
+      }
+    },
+    {
+      "pin": "PC13",
+      "label": "KEY_USER",
+      "mode": "INPUT",
+      "params": {
+        "pull": "PULLDOWN",
+        "exti": { "enabled": true, "edge": "FALLING" }
+      }
+    },
+    {
+      "pin": "PA0",
+      "mode": "INPUT",
+      "params": {
+        "pull": "NONE",
+        "exti": { "enabled": false, "edge": "FALLING" }
+      }
+    }
+  ],
+  "naming": { "prefix": "MX_" }
+}

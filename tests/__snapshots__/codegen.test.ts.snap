@@ -1,0 +1,139 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`代码生成 (sample-project) > 生成内容与快照一致 1`] = `
+"/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file    gpio.h
+  * @brief   GPIO 引脚定义 - 由 MCUCubeMX 自动生成
+  * @target  GD32L233RCT6
+  * @note    重新生成时本文件会被覆盖，请把手写代码放在 USER CODE 区段内
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+#ifndef __GPIO_H
+#define __GPIO_H
+
+#include "gd32l23x.h"
+
+
+/* ==================== LED ==================== */
+
+#define LED_R_Pin         GPIO_PIN_5
+#define LED_R_GPIO_Port   GPIOA
+
+
+/* ==================== KEY ==================== */
+
+#define KEY_USER_Pin         GPIO_PIN_13
+#define KEY_USER_GPIO_Port   GPIOC
+
+
+/* ==================== UNLABELED ==================== */
+
+#define PA0_Pin         GPIO_PIN_0
+#define PA0_GPIO_Port   GPIOA
+
+
+
+/* 初始化函数声明 */
+void MX_GPIO_Init(void);
+
+void MX_EXTI_Init(void);
+
+
+#endif /* __GPIO_H */
+"
+`;
+
+exports[`代码生成 (sample-project) > 生成内容与快照一致 2`] = `
+"/**
+  ******************************************************************************
+  * @file    gpio.c
+  * @brief   GPIO 初始化 - 由 MCUCubeMX 自动生成
+  * @target  GD32L233RCT6
+  ******************************************************************************
+  */
+
+#include "gpio.h"
+
+/**
+  * @brief  初始化 GPIO 引脚
+  */
+void MX_GPIO_Init(void)
+{
+    /* 使能 GPIO 时钟 */
+
+    rcu_periph_clock_enable(RCU_GPIOA);
+
+    rcu_periph_clock_enable(RCU_GPIOC);
+
+
+    /* ============ 输出引脚 ============ */
+
+    /* LED_R (PA5) */
+    gpio_mode_set(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO_PIN_5);
+    gpio_output_options_set(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, GPIO_PIN_5);
+    gpio_bit_set(GPIOA, GPIO_PIN_5);
+
+
+    /* ============ 输入引脚 ============ */
+
+    /* KEY_USER (PC13) */
+    gpio_mode_set(GPIOC, GPIO_MODE_INPUT, GPIO_PUPD_PULLDOWN, GPIO_PIN_13);
+
+
+    /* PA0 (PA0) */
+    gpio_mode_set(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO_PIN_0);
+
+
+}
+
+
+/**
+  * @brief  初始化外部中断（EXTI）
+  * @note   Cortex-M23 优先级分组固定，nvic_irq_enable 仅需一个优先级参数
+  */
+void MX_EXTI_Init(void)
+{
+
+    /* KEY_USER (PC13) */
+    exti_init(EXTI_13, EXTI_INTERRUPT, EXTI_TRIG_FALLING);
+
+
+
+    nvic_irq_enable(EXTI10_15_IRQn, 0);
+
+}
+
+"
+`;
+
+exports[`代码生成 (sample-project) > 生成内容与快照一致 3`] = `
+"/**
+  ******************************************************************************
+  * @file    app_it.c
+  * @brief   EXTI 中断服务函数 - 由 MCUCubeMX 自动生成
+  * @note    若工程的 gd32l23x_it.c 已定义同名 handler，请删除其中的 EXTI 部分
+  *          再使用本文件，避免符号重复定义；或将本文件加入编译。
+  ******************************************************************************
+  */
+
+#include "gd32l23x.h"
+#include "gpio.h"
+
+
+void EXTI10_15_IRQHandler(void)
+{
+
+    if (RESET != exti_interrupt_flag_get(EXTI_13)) {
+        exti_interrupt_flag_clear(EXTI_13);
+        /* USER CODE BEGIN EXTI10_15_EXTI13 */
+        /* USER CODE END EXTI10_15_EXTI13 */
+    }
+
+}
+
+"
+`;
