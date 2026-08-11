@@ -49,6 +49,7 @@ describe('嘉立创桥集成测试', () => {
     ])
     expect(res.placed).toBe(1)
     expect(Array.isArray(res.failed)).toBe(true)
+    expect(res.converted).toBe(0)
     const code = `
 const comps = await eda.sch_PrimitiveComponent.getAll(undefined, false);
 let removed = 0;
@@ -67,5 +68,42 @@ return { removed, foundName };`
     const res2 = await execute<{ removed: number; foundName: string }>(live!.port, code)
     expect(res2.removed).toBeGreaterThan(0)
     expect(res2.foundName).toBe('__SYNC_TEST__')
+  })
+
+  it.runIf(run)('线段转端口动作可执行并跨执行持久化', async () => {
+    const x = 9300
+    const y = 9300
+    const res = await applySyncActions(live!.port, [
+      { action: 'wire-to-port', net: '__PORTTEST__', x, y, direction: 'OUT', rotation: 0 },
+    ])
+    expect(res.converted).toBe(1)
+
+    const check = await execute<{ count: number }>(live!.port, `
+const comps = await eda.sch_PrimitiveComponent.getAll(undefined, false);
+let count = 0;
+for (const c of comps || []) {
+  let cx = null;
+  let cy = null;
+  try { cx = await c.getState_X(); } catch {}
+  try { cy = await c.getState_Y(); } catch {}
+  if (Math.abs(cx - ${x}) < 0.5 && Math.abs(cy - ${y}) < 0.5) count++;
+}
+return { count };`)
+    expect(check.count).toBeGreaterThan(0)
+
+    const cleanup = await execute<{ removed: number }>(live!.port, `
+const comps = await eda.sch_PrimitiveComponent.getAll(undefined, false);
+let removed = 0;
+for (const c of comps || []) {
+  let cx = null;
+  let cy = null;
+  try { cx = await c.getState_X(); } catch {}
+  try { cy = await c.getState_Y(); } catch {}
+  if (Math.abs(cx - ${x}) < 0.5 && Math.abs(cy - ${y}) < 0.5) {
+    try { await eda.sch_PrimitiveComponent.delete(c.primitiveId); removed++; } catch {}
+  }
+}
+return { removed };`)
+    expect(cleanup.removed).toBeGreaterThan(0)
   })
 })

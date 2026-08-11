@@ -352,11 +352,14 @@ export async function applySyncActions(
   actions: SyncAction[],
   windowId?: string,
 ): Promise<SyncResult> {
-  if (actions.length === 0) return { updated: 0, replaced: 0, renamed: 0, placed: 0, failed: [] }
+  if (actions.length === 0) {
+    return { updated: 0, replaced: 0, converted: 0, renamed: 0, placed: 0, failed: [] }
+  }
   const code = `
 const actions = ${JSON.stringify(actions)};
 let updated = 0;
 let replaced = 0;
+let converted = 0;
 let renamed = 0;
 let placed = 0;
 const failures = [];
@@ -383,6 +386,32 @@ for (const a of actions.filter((x) => x.action === 'replace-port')) {
     replaced++;
   } catch (err) {
     failures.push('更换端口 ' + a.net + ': ' + (err && err.message));
+  }
+}
+for (const a of actions.filter((x) => x.action === 'wire-to-port')) {
+  try {
+    // 删除与该引脚连接点重合的原线段
+    const wireList = await eda.sch_PrimitiveWire.getAll();
+    for (const w of wireList || []) {
+      let line = null;
+      try { line = await w.getState_Line(); } catch {}
+      if (!line) continue;
+      let touch = false;
+      for (let i = 0; i < line.length; i += 2) {
+        if (Math.abs(line[i] - a.x) < 0.5 && Math.abs(line[i + 1] - a.y) < 0.5) {
+          touch = true;
+          break;
+        }
+      }
+      if (touch) {
+        try { await eda.sch_PrimitiveWire.delete(w.primitiveId); } catch {}
+      }
+    }
+    // 在引脚处放置网络端口
+    await eda.sch_PrimitiveComponent.createNetPort(a.direction, a.net, a.x, a.y, a.rotation || 0, false);
+    converted++;
+  } catch (err) {
+    failures.push('线段转端口 ' + a.net + ': ' + (err && err.message));
   }
 }
 const wires = await eda.sch_PrimitiveWire.getAll();
@@ -412,7 +441,7 @@ for (const a of actions.filter((x) => x.action === 'place-port')) {
     failures.push('新增端口 ' + a.net + ': ' + (err && err.message));
   }
 }
-return { updated, replaced, renamed, placed, failed: failures };`
+return { updated, replaced, converted, renamed, placed, failed: failures };`
   return execute<SyncResult>(port, code, windowId)
 }
 

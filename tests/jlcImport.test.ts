@@ -271,14 +271,14 @@ describe('导出到 EDA 计划构建', () => {
     { number: '3', name: 'PA5', x: 0, y: 0, net: null },
   ]
 
-  it('线段连接改网络、未连线新增端口，其余按原因跳过', () => {
+  it('线段连接转为端口（删线段）、未连线新增端口，其余按原因跳过', () => {
     const plan = buildExportPlan(gd32, assignments, pinMap)
     expect(plan.changes.map((c) => c.pin).sort()).toEqual(['PA1', 'PA5'])
     expect(plan.changes.find((c) => c.pin === 'PA1')).toMatchObject({
       oldNet: 'INT',
       newNet: 'SDA',
       mode: 'INPUT',
-      action: 'rename-wire',
+      action: 'wire-to-port',
       x: 0,
       y: 0,
     })
@@ -306,7 +306,7 @@ describe('导出到 EDA 计划构建', () => {
       x: 100,
       y: 200,
       newNet: 'LED_R',
-      action: 'rename-wire',
+      action: 'wire-to-port',
     })
   })
 

@@ -531,7 +531,7 @@ async function confirmExport() {
         []
       ) as string[]
       parts.push(
-        `更新端口 ${result.updated}、更换端口 ${result.replaced}、改线段网络 ${result.renamed}、新增端口 ${result.placed}`,
+        `更新端口 ${result.updated}、更换端口 ${result.replaced}、线段转端口 ${result.converted}、新增端口 ${result.placed}`,
       )
       if (failed.length) parts.push(`失败 ${failed.length}`)
       if (failed.length) {
@@ -582,7 +582,7 @@ function closeText(name: string): string {
 const actionLabels: Record<string, string> = {
   'update-port': '更新端口',
   'replace-port': '更换端口',
-  'rename-wire': '改线段网络',
+  'wire-to-port': '删线段+放端口',
   'place-port': '新增端口',
 }
 
@@ -880,8 +880,8 @@ onMounted(() => {
         type="warning"
         :closable="false"
         show-icon
-        title="按引脚现有连接方式同步；配置属性（模式/标签/上下拉/EXTI/输出参数）写入 MCU 元件本身"
-        :description="`网络名由端口/线段表达，属性写 MCU（PAx_MODE 等）；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
+        title="按引脚现有连接方式同步：端口改名/方向调整→删除重放；线段→删除线段并放端口；未连→新增 IN/OUT 端口"
+        :description="`配置属性（模式/标签/上下拉/EXTI/输出参数）写入 MCU 元件本身；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
         style="margin-bottom: 8px"
       />
       <el-table :data="exportPreview.changes" size="small" max-height="280">
@@ -896,7 +896,7 @@ onMounted(() => {
                   ? 'danger'
                   : row.action === 'update-port'
                     ? 'warning'
-                    : row.action === 'rename-wire'
+                    : row.action === 'wire-to-port'
                       ? 'primary'
                       : 'success'
               "

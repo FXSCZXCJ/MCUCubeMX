@@ -308,7 +308,8 @@ export function buildExportPlan(
       })
       continue
     }
-    const action = conn === 'wire' || oldNet ? 'rename-wire' : 'place-port'
+    // 线段连接：删除该线段并在引脚处放置网络端口（不再改线段网络名）
+    const action = conn === 'wire' ? 'wire-to-port' : 'place-port'
     items.push({
       pin: assignment.pin,
       edaName: edaPin.name,
