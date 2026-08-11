@@ -15,6 +15,12 @@ export function normalizeRotation(deg: number): number {
   return ((deg % 360) + 360) % 360
 }
 
+/** 旋转后轴对齐外接框的放大系数：|cos θ| + |sin θ|（0°/90°/180°/270°=1，45°=√2） */
+export function rotationBBoxFactor(deg: number): number {
+  const rad = ((deg % 360) * Math.PI) / 180
+  return Math.abs(Math.cos(rad)) + Math.abs(Math.sin(rad))
+}
+
 export interface PackageGeometry {
   body: number
   margin: number

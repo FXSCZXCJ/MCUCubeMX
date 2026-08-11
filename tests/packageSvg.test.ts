@@ -6,6 +6,7 @@ import {
   outsideLabelDy,
   packageGeometry,
   pinGeometry,
+  rotationBBoxFactor,
 } from '../src/lib/packageSvg'
 import type { PinDef } from '../src/types'
 
@@ -41,6 +42,19 @@ describe('旋转角度归一化', () => {
     expect(normalizeRotation(405)).toBe(45)
     expect(normalizeRotation(-405)).toBe(315)
     expect(normalizeRotation(360)).toBe(0)
+  })
+})
+
+describe('旋转外接框放大系数', () => {
+  it('0°/90°/180°/270° 为 1，45° 为 √2', () => {
+    expect(rotationBBoxFactor(0)).toBeCloseTo(1, 5)
+    expect(rotationBBoxFactor(90)).toBeCloseTo(1, 5)
+    expect(rotationBBoxFactor(180)).toBeCloseTo(1, 5)
+    expect(rotationBBoxFactor(270)).toBeCloseTo(1, 5)
+    expect(rotationBBoxFactor(45)).toBeCloseTo(Math.SQRT2, 5)
+    expect(rotationBBoxFactor(135)).toBeCloseTo(Math.SQRT2, 5)
+    expect(rotationBBoxFactor(225)).toBeCloseTo(Math.SQRT2, 5)
+    expect(rotationBBoxFactor(315)).toBeCloseTo(Math.SQRT2, 5)
   })
 })
 

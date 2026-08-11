@@ -6,6 +6,7 @@ import {
   outsideLabelDy,
   packageGeometry,
   pinGeometry,
+  rotationBBoxFactor,
   type PinState,
 } from '../lib/packageSvg'
 import { useProjectStore } from '../stores/project'
@@ -43,8 +44,8 @@ function updateAutoZoom() {
   const top = el.getBoundingClientRect().top
   const availHeight = window.innerHeight - top - 12 - CHROME_HEIGHT
   const size = geo.value.svgSize
-  // 旋转后按对角线占用空间（45° 最大为 √2 倍）计算自动适配
-  const rotFactor = rotation.value % 180 === 0 ? 1 : Math.SQRT2
+  // 旋转后按轴对齐外接框占用空间计算自动适配（90° 时不缩小，45° 时 √2 倍）
+  const rotFactor = rotationBBoxFactor(rotation.value)
   autoZoom.value = Math.min(
     MAX_ZOOM,
     Math.max(MIN_ZOOM, Math.min(width / (size * rotFactor), availHeight / (size * rotFactor))),
