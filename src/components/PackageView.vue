@@ -19,6 +19,8 @@ const autoFit = ref(true)
 const manualFactor = ref(1)
 const autoZoom = ref(1)
 const rotation = ref(0)
+const hoverPin = ref<PinDef | null>(null)
+const hoverPos = ref<{ x: number; y: number } | null>(null)
 
 const MIN_ZOOM = 0.4
 const MAX_ZOOM = 2.5
@@ -107,6 +109,48 @@ const pins = computed(() =>
     }
   }),
 )
+
+const hoverAssignment = computed(() =>
+  hoverPin.value ? store.assignments[hoverPin.value.name] : undefined,
+)
+
+const hoverAfSignals = computed(() => hoverPin.value?.alternate ?? [])
+
+const hoverTypeText = computed(() => {
+  const pin = hoverPin.value
+  if (!pin) return ''
+  if (pin.type === 'POWER') return '电源'
+  if (pin.type === 'NC') return '空脚'
+  if (pin.special === 'swd') return '特殊（SWD 调试）'
+  if (pin.special === 'boot') return '特殊（BOOT）'
+  if (pin.special === 'nrst') return '特殊（NRST）'
+  if (pin.special === 'osc') return '特殊（晶振）'
+  return 'IO'
+})
+
+const hoverPullText = computed(() => {
+  const pull = hoverAssignment.value?.params.pull
+  return pull === 'PULLUP' ? '上拉' : pull === 'PULLDOWN' ? '下拉' : '无'
+})
+
+const hoverExtiText = computed(() => {
+  const edge = hoverAssignment.value?.params.exti?.edge
+  return edge === 'RISING' ? '上升沿' : edge === 'BOTH' ? '双边沿' : '下降沿'
+})
+
+function onPinHover(pin: PinDef, event: MouseEvent) {
+  hoverPin.value = pin
+  hoverPos.value = { x: event.clientX, y: event.clientY }
+}
+
+function onPinMove(event: MouseEvent) {
+  hoverPos.value = { x: event.clientX, y: event.clientY }
+}
+
+function onPinLeave() {
+  hoverPin.value = null
+  hoverPos.value = null
+}
 
 const LEGEND_LABELS: Record<string, string> = {
   unassigned: '未配置',
@@ -201,12 +245,10 @@ function displayLabel(pin: PinDef): string | undefined {
           class="pin"
           :class="{ selectable: item.pin.type === 'IO' }"
           @click="onPinClick(item.pin)"
+          @mouseenter="onPinHover(item.pin, $event)"
+          @mousemove="onPinMove"
+          @mouseleave="onPinLeave"
         >
-          <title>
-            {{ item.pin.name }}（封装脚 #{{ item.pin.number }}）{{
-              item.pin.aliases?.length ? ` · ${item.pin.aliases.join('/')}` : ''
-            }}
-          </title>
           <rect
             :x="item.g.x"
             :y="item.g.y"
@@ -247,6 +289,44 @@ function displayLabel(pin: PinDef): string | undefined {
           </text>
         </g>
       </svg>
+
+      <div
+        v-if="hoverPin && hoverPos"
+        class="pin-popover"
+        :style="{ left: `${hoverPos.x + 16}px`, top: `${hoverPos.y + 16}px` }"
+      >
+        <div class="pop-title">
+          {{ hoverPin.name }}
+          <span class="sub">#{{ hoverPin.number }}</span>
+        </div>
+        <div class="pop-line">
+          类型：{{ hoverTypeText }}
+          <span v-if="hoverPin.aliases?.length" class="sub">（别名 {{ hoverPin.aliases.join(' / ') }}）</span>
+        </div>
+        <template v-if="hoverAssignment">
+          <div class="pop-line">标签：{{ hoverAssignment.label || '—' }}</div>
+          <div class="pop-line">模式：{{ hoverAssignment.mode }}</div>
+          <div v-if="hoverAssignment.mode === 'OUTPUT'" class="pop-line">
+            输出：{{ hoverAssignment.params.outputType }} / {{ hoverAssignment.params.speed }}MHz /
+            {{ hoverAssignment.params.level }}
+          </div>
+          <div v-if="hoverAssignment.params.pull && hoverAssignment.params.pull !== 'NONE'" class="pop-line">
+            上下拉：{{ hoverPullText }}
+          </div>
+          <div v-if="hoverAssignment.params.exti?.enabled" class="pop-line">
+            EXTI：{{ hoverExtiText }}
+          </div>
+        </template>
+        <div v-else class="pop-line">未配置</div>
+        <div v-if="hoverAfSignals.length" class="pop-af">
+          <div class="pop-line">可配置 AF（后续实现）：</div>
+          <div class="af-tags">
+            <span v-for="af in hoverAfSignals" :key="af" class="af-tag" title="AF 配置将在后续版本实现">
+              {{ af }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="legend">
@@ -293,6 +373,48 @@ function displayLabel(pin: PinDef): string | undefined {
   flex: none;
   transform-origin: center center;
   transition: transform 0.2s ease;
+}
+.pin-popover {
+  position: fixed;
+  z-index: 3000;
+  min-width: 200px;
+  max-width: 320px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #374151;
+  pointer-events: none;
+}
+.pop-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.pop-line {
+  margin: 2px 0;
+}
+.pop-af {
+  margin-top: 6px;
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 6px;
+}
+.af-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.af-tag {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: #6b7280;
+  cursor: not-allowed;
 }
 .pin.selectable {
   cursor: pointer;
