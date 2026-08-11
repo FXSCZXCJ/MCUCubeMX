@@ -138,6 +138,9 @@ const hoverExtiText = computed(() => {
   return edge === 'RISING' ? '上升沿' : edge === 'BOTH' ? '双边沿' : '下降沿'
 })
 
+// 旋转封装图时文字反向补偿，保持水平可读（文字仍随引脚移动）
+const pinTextStyle = computed(() => ({ transform: `rotate(${-rotation.value}deg)` }))
+
 function onPinHover(pin: PinDef, event: MouseEvent) {
   hoverPin.value = pin
   hoverPos.value = { x: event.clientX, y: event.clientY }
@@ -226,6 +229,8 @@ function displayLabel(pin: PinDef): string | undefined {
           <title>Pin 1 方向标记</title>
         </circle>
         <text
+          class="pin-text"
+          :style="pinTextStyle"
           :x="geo.svgSize / 2"
           :y="geo.svgSize / 2 - 8"
           text-anchor="middle"
@@ -235,7 +240,15 @@ function displayLabel(pin: PinDef): string | undefined {
         >
           {{ device.device }}
         </text>
-        <text :x="geo.svgSize / 2" :y="geo.svgSize / 2 + 14" text-anchor="middle" font-size="12" fill="#6b7280">
+        <text
+          class="pin-text"
+          :style="pinTextStyle"
+          :x="geo.svgSize / 2"
+          :y="geo.svgSize / 2 + 14"
+          text-anchor="middle"
+          font-size="12"
+          fill="#6b7280"
+        >
           {{ device.package }} · {{ device.core }}
         </text>
 
@@ -260,6 +273,8 @@ function displayLabel(pin: PinDef): string | undefined {
             :stroke-width="item.selected ? 2.5 : 1"
           />
           <text
+            class="pin-text"
+            :style="pinTextStyle"
             :x="item.g.x + item.g.w / 2"
             :y="item.g.y + item.g.h / 2 + 3"
             text-anchor="middle"
@@ -269,6 +284,8 @@ function displayLabel(pin: PinDef): string | undefined {
             {{ item.pin.number }}
           </text>
           <text
+            class="pin-text"
+            :style="pinTextStyle"
             :x="item.g.innerX"
             :y="item.g.innerY"
             :text-anchor="item.g.innerAnchor"
@@ -279,6 +296,8 @@ function displayLabel(pin: PinDef): string | undefined {
           </text>
           <text
             v-if="displayLabel(item.pin) && displayLabel(item.pin) !== item.pin.name"
+            class="pin-text"
+            :style="pinTextStyle"
             :x="item.g.labelX"
             :y="item.g.labelY + item.labelDy"
             :text-anchor="item.g.anchor"
@@ -372,6 +391,11 @@ function displayLabel(pin: PinDef): string | undefined {
 .package-svg {
   flex: none;
   transform-origin: center center;
+  transition: transform 0.2s ease;
+}
+.pin-text {
+  transform-box: fill-box;
+  transform-origin: center;
   transition: transform 0.2s ease;
 }
 .pin-popover {
