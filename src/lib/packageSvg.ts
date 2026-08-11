@@ -1,12 +1,25 @@
-import type { PinDef } from '../types'
+import type { DevicePackage, PinDef } from '../types'
 
 export const PAD_W = 14
 export const PAD_LEN = 20
-export const BODY = 460
-export const PINS_PER_SIDE = 16
 export const LABEL_MARGIN = 40
-export const MARGIN = PAD_LEN + LABEL_MARGIN
-export const SVG_SIZE = BODY + MARGIN * 2
+// 相邻引脚名称标签不重叠所需的最小间距（已在 LQFP64/LQFP100 上验证）
+export const PITCH = 28.8
+
+export interface PackageGeometry {
+  body: number
+  margin: number
+  svgSize: number
+  pitch: number
+  pinsPerSide: number
+}
+
+export function packageGeometry(device: DevicePackage): PackageGeometry {
+  const pinsPerSide = device.pinsPerSide
+  const body = Math.round(PITCH * pinsPerSide)
+  const margin = PAD_LEN + LABEL_MARGIN
+  return { body, margin, svgSize: body + margin * 2, pitch: PITCH, pinsPerSide }
+}
 
 export interface PinGeometry {
   x: number
@@ -19,58 +32,58 @@ export interface PinGeometry {
   rotate?: boolean
 }
 
-function along(bodyStart: number, i: number): number {
-  return bodyStart + ((i + 0.5) * BODY) / PINS_PER_SIDE
+function along(bodyStart: number, i: number, geo: PackageGeometry): number {
+  return bodyStart + ((i + 0.5) * geo.body) / geo.pinsPerSide
 }
 
-export function pinGeometry(pin: PinDef): PinGeometry {
+export function pinGeometry(pin: PinDef, geo: PackageGeometry): PinGeometry {
   const n = pin.number - 1
-  const sideIndex = n % PINS_PER_SIDE
+  const sideIndex = n % geo.pinsPerSide
   const side = pin.side
   if (side === 'top') {
-    const x = along(MARGIN, sideIndex)
+    const x = along(geo.margin, sideIndex, geo)
     return {
       x: x - PAD_W / 2,
-      y: MARGIN - PAD_LEN,
+      y: geo.margin - PAD_LEN,
       w: PAD_W,
       h: PAD_LEN,
       labelX: x,
-      labelY: MARGIN - PAD_LEN - 8,
+      labelY: geo.margin - PAD_LEN - 8,
       anchor: 'middle',
     }
   }
   if (side === 'right') {
-    const y = along(MARGIN, sideIndex)
+    const y = along(geo.margin, sideIndex, geo)
     return {
-      x: MARGIN + BODY,
+      x: geo.margin + geo.body,
       y: y - PAD_W / 2,
       w: PAD_LEN,
       h: PAD_W,
-      labelX: MARGIN + BODY + PAD_LEN + 6,
+      labelX: geo.margin + geo.body + PAD_LEN + 6,
       labelY: y + 4,
       anchor: 'start',
     }
   }
   if (side === 'bottom') {
-    const x = along(MARGIN, PINS_PER_SIDE - 1 - sideIndex)
+    const x = along(geo.margin, geo.pinsPerSide - 1 - sideIndex, geo)
     return {
       x: x - PAD_W / 2,
-      y: MARGIN + BODY,
+      y: geo.margin + geo.body,
       w: PAD_W,
       h: PAD_LEN,
       labelX: x,
-      labelY: MARGIN + BODY + PAD_LEN + 16,
+      labelY: geo.margin + geo.body + PAD_LEN + 16,
       anchor: 'middle',
     }
   }
-  // left: pins 49..64 run bottom -> top
-  const y = along(MARGIN, PINS_PER_SIDE - 1 - sideIndex)
+  // left: pins run bottom -> top
+  const y = along(geo.margin, geo.pinsPerSide - 1 - sideIndex, geo)
   return {
-    x: MARGIN - PAD_LEN,
+    x: geo.margin - PAD_LEN,
     y: y - PAD_W / 2,
     w: PAD_LEN,
     h: PAD_W,
-    labelX: MARGIN - PAD_LEN - 6,
+    labelX: geo.margin - PAD_LEN - 6,
     labelY: y + 4,
     anchor: 'end',
   }

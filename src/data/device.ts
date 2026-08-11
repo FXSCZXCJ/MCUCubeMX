@@ -2,67 +2,94 @@ import type { AfEntry, DevicePackage, ExtiEntry, PinDef } from '../types'
 import deviceJson from '../../data/devices/gd32l233rct6/package.json'
 import afJson from '../../data/devices/gd32l233rct6/af.json'
 import extiJson from '../../data/devices/gd32l233rct6/exti.json'
+import f427DeviceJson from '../../data/devices/gd32f427ve/package.json'
+import f427AfJson from '../../data/devices/gd32f427ve/af.json'
+import f427ExtiJson from '../../data/devices/gd32f427ve/exti.json'
 
-export const DEVICE_NAME = 'GD32L233RCT6'
+export const DEFAULT_DEVICE_ID = 'GD32L233RCT6'
 
-export const device: DevicePackage = deviceJson as DevicePackage
-export const afEntries: AfEntry[] = afJson.entries as AfEntry[]
-export const extiEntries: ExtiEntry[] = extiJson.entries as ExtiEntry[]
+export interface Lookup {
+  findPin(name: string): PinDef | undefined
+  isGpio(pin: PinDef): boolean
+  portOf(name: string): string
+  pinIndex(name: string): number
+  gpioPortMacro(name: string): string
+  gpioPinMacro(name: string): string
+  rcuClockMacro(name: string): string
+  extiOf(name: string): ExtiEntry | undefined
+  afSignalsOf(pinName: string): Map<number, string[]>
+}
 
-const pinMap = new Map<string, PinDef>()
-for (const pin of device.pins) {
-  pinMap.set(pin.name.toUpperCase(), pin)
-  for (const alias of pin.aliases ?? []) {
-    pinMap.set(alias.toUpperCase(), pin)
+export interface DeviceData {
+  id: string
+  device: DevicePackage
+  afEntries: AfEntry[]
+  extiEntries: ExtiEntry[]
+  lookup: Lookup
+}
+
+function buildLookup(device: DevicePackage, afEntries: AfEntry[], extiEntries: ExtiEntry[]): Lookup {
+  const pinMap = new Map<string, PinDef>()
+  for (const pin of device.pins) {
+    pinMap.set(pin.name.toUpperCase(), pin)
+    for (const alias of pin.aliases ?? []) {
+      pinMap.set(alias.toUpperCase(), pin)
+    }
+  }
+
+  const afMap = new Map<string, Map<number, string[]>>()
+  for (const entry of afEntries) {
+    const byAf = afMap.get(entry.pin) ?? new Map<number, string[]>()
+    const list = byAf.get(entry.af) ?? []
+    list.push(entry.signal)
+    byAf.set(entry.af, list)
+    afMap.set(entry.pin, byAf)
+  }
+
+  const extiMap = new Map<string, ExtiEntry>()
+  for (const entry of extiEntries) {
+    extiMap.set(entry.pin, entry)
+  }
+
+  return {
+    findPin: (name) => pinMap.get(name.trim().toUpperCase()),
+    isGpio: (pin) => pin.type === 'IO',
+    portOf: (name) => name.charAt(1).toUpperCase(),
+    pinIndex: (name) => Number.parseInt(name.slice(2), 10),
+    gpioPortMacro: (name) => `GPIO${name.charAt(1).toUpperCase()}`,
+    gpioPinMacro: (name) => `GPIO_PIN_${Number.parseInt(name.slice(2), 10)}`,
+    rcuClockMacro: (name) => `RCU_GPIO${name.charAt(1).toUpperCase()}`,
+    extiOf: (name) => extiMap.get(name.toUpperCase()),
+    afSignalsOf: (pinName) => afMap.get(pinName) ?? new Map<number, string[]>(),
   }
 }
 
-const afMap = new Map<string, Map<number, string[]>>()
-for (const entry of afEntries) {
-  const byAf = afMap.get(entry.pin) ?? new Map<number, string[]>()
-  const list = byAf.get(entry.af) ?? []
-  list.push(entry.signal)
-  byAf.set(entry.af, list)
-  afMap.set(entry.pin, byAf)
+function buildDevice(
+  id: string,
+  device: DevicePackage,
+  afEntries: AfEntry[],
+  extiEntries: ExtiEntry[],
+): DeviceData {
+  return { id, device, afEntries, extiEntries, lookup: buildLookup(device, afEntries, extiEntries) }
 }
 
-const extiMap = new Map<string, ExtiEntry>()
-for (const entry of extiEntries) {
-  extiMap.set(entry.pin, entry)
+export const devices: Record<string, DeviceData> = {
+  GD32L233RCT6: buildDevice(
+    'GD32L233RCT6',
+    deviceJson as DevicePackage,
+    afJson.entries as AfEntry[],
+    extiJson.entries as ExtiEntry[],
+  ),
+  GD32F427VE: buildDevice(
+    'GD32F427VE',
+    f427DeviceJson as DevicePackage,
+    f427AfJson.entries as AfEntry[],
+    f427ExtiJson.entries as ExtiEntry[],
+  ),
 }
 
-export function findPin(name: string): PinDef | undefined {
-  return pinMap.get(name.trim().toUpperCase())
-}
+export const deviceIds = Object.keys(devices)
 
-export function isGpio(pin: PinDef): boolean {
-  return pin.type === 'IO'
-}
-
-export function portOf(name: string): string {
-  return name.charAt(1).toUpperCase()
-}
-
-export function pinIndex(name: string): number {
-  return Number.parseInt(name.slice(2), 10)
-}
-
-export function gpioPortMacro(name: string): string {
-  return `GPIO${portOf(name)}`
-}
-
-export function gpioPinMacro(name: string): string {
-  return `GPIO_PIN_${pinIndex(name)}`
-}
-
-export function rcuClockMacro(name: string): string {
-  return `RCU_GPIO${portOf(name)}`
-}
-
-export function extiOf(name: string): ExtiEntry | undefined {
-  return extiMap.get(name.toUpperCase())
-}
-
-export function afSignalsOf(pinName: string): Map<number, string[]> {
-  return afMap.get(pinName) ?? new Map<number, string[]>()
+export function getDeviceData(id: string): DeviceData {
+  return devices[id] ?? devices[DEFAULT_DEVICE_ID]
 }

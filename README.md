@@ -3,7 +3,13 @@
 一个纯本地 Web 应用：数据驱动渲染 LQFP64 封装图，点击引脚配置 GPIO/EXTI，实时冲突检查，
 一键生成并下载可编译的 `gpio.h` / `gpio.c` / EXTI 中断文件，支持配置导入导出。
 
-当前目标器件：**GD32L233RCT6**（LQFP64、256KB Flash、32KB SRAM、Cortex-M23 @64MHz）。
+当前支持的器件：
+
+- **GD32L233RCT6**：LQFP64、256KB Flash、32KB SRAM、Cortex-M23 @64MHz（GD32L23x 标准外设库）
+- **GD32F427VE**：LQFP100、512KB Flash、256KB SRAM、Cortex-M4 @200MHz（GD32F4xx 标准外设库）
+
+界面右上角可切换器件；切换后自动清空当前配置。代码生成按器件的固件档案自动适配
+（包含头文件、GPIO 速度档位、NVIC 优先级分组与参数个数、EXTI 边沿枚举）。
 
 ## 功能
 
@@ -35,7 +41,7 @@ npm run dev        # http://localhost:5173
 ## 编译验证
 
 `npm run verify:build` 会调用浏览器端同一套生成逻辑，把样例配置生成到临时目录，再与
-GD32L23x 固件库（CMSIS + 标准外设库）一起用 arm-none-eabi-gcc 完整编译链接。
+对应器件的固件库（CMSIS + 标准外设库）一起用 arm-none-eabi-gcc 完整编译链接。
 
 固件库路径通过环境变量指定（不纳入本仓库，遵守其软件许可）：
 
@@ -44,7 +50,10 @@ $env:GD32L23X_FIRMWARE_DIR = "D:\...\GD32L23x_Firmware_Library_V2.4.0\Firmware"
 npm run verify:build
 ```
 
-默认路径为 `D:\Project\GD32_Project\TX_RTOS\GD32L23x_Firmware_Library_V2.4.0\Firmware`。
+GD32F427VE 的验证：`$env:GD32F4XX_FIRMWARE_DIR = "D:\...\gd32f4xx"` 后执行
+`node scripts/verify-build.mjs --project tests/fixtures/sample-project-f427.json`。
+F4xx 编译验证使用仓库自带的 CMSIS 5 内核头（`scripts/firmware/cmsis`，Apache-2.0）
+与最小 startup（`scripts/firmware/startup_gd32f427.S`）。
 
 ## 器件数据来源
 

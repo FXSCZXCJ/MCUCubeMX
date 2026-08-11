@@ -1,0 +1,7 @@
+CMSIS 内核头文件来源：
+- core_cm4.h / cmsis_compiler.h / cmsis_gcc.h / cmsis_version.h / mpu_armv7.h
+- 版本: CMSIS 5 (core_cm4.h V5.0.8)，取自 STMicroelectronics STM32Cube 工程
+  （Drivers/CMSIS/Core/Include），源许可证为 Apache-2.0（见各头文件 SPDX 头）。
+
+这些文件仅用于 MCUCubeMX 的本地编译验证（verify-build），
+不随生成代码分发。

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { device } from '../data/device'
 import { useProjectStore } from '../stores/project'
 import type { PinDef } from '../types'
 
@@ -15,7 +14,7 @@ interface Row {
 }
 
 const rows = computed<Row[]>(() =>
-  device.pins
+  store.deviceData.device.pins
     .filter((p) => p.type === 'IO')
     .map((pin) => {
       const a = store.assignments[pin.name]

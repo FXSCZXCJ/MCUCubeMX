@@ -16,7 +16,15 @@ describe('浏览器端 EJS 编译', () => {
 
   it('生成器使用的主模板可被 client 编译', () => {
     const compiled = ejs.compile(GPIO_H_TEMPLATE, { client: true })
-    const out = compiled({ device: 'GD32L233RCT6', prefix: 'MX_', hasExti: false, groups: [] }) as string
+    const out = compiled({
+      device: 'GD32L233RCT6',
+      prefix: 'MX_',
+      hasExti: false,
+      includeHeader: 'gd32l23x.h',
+      nvicGroup: false,
+      prigroupMacro: '',
+      groups: [],
+    }) as string
     expect(out).toContain('#ifndef __GPIO_H')
     expect(out).toContain('void MX_GPIO_Init(void);')
   })

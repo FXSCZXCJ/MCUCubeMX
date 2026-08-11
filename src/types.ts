@@ -1,11 +1,22 @@
 export type PinMode = 'INPUT' | 'OUTPUT'
 export type PortLetter = 'A' | 'B' | 'C' | 'D' | 'F'
 export type PinSide = 'top' | 'right' | 'bottom' | 'left'
+export type PinType = 'IO' | 'POWER' | 'NC'
+
+export interface FirmwareProfile {
+  header: string
+  rcuPrefix: string
+  speeds: string[]
+  extiEdgePrefix: string
+  nvic: { group: boolean; groupMacro?: string }
+  define: string
+  core: string
+}
 
 export interface PinDef {
   number: number
   name: string
-  type: 'IO' | 'POWER'
+  type: PinType
   level?: '5VT'
   side: PinSide
   aliases?: string[]
@@ -20,6 +31,8 @@ export interface DevicePackage {
   core: string
   flash: string
   sram: string
+  pinsPerSide: number
+  firmware: FirmwareProfile
   source: string
   pins: PinDef[]
 }
@@ -60,7 +73,7 @@ export interface PinAssignment {
 
 export interface ProjectConfig {
   version: 1
-  device: 'GD32L233RCT6'
+  device: string
   pins: PinAssignment[]
   naming: { prefix: string }
 }

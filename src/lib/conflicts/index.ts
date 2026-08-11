@@ -1,21 +1,22 @@
-import type { Conflict, DevicePackage, PinAssignment, ProjectConfig } from '../../types'
-import { findPin, isGpio, portOf, pinIndex } from '../../data/device'
+import type { Conflict, PinAssignment, ProjectConfig } from '../../types'
+import type { DeviceData } from '../../data/device'
 
 const BLOCKED_SPECIALS = ['nrst', 'boot', 'swd']
 
 export function checkConflicts(
   config: ProjectConfig,
-  _device: DevicePackage,
+  deviceData: DeviceData,
   unlocked: string[] = [],
 ): Conflict[] {
   const conflicts: Conflict[] = []
+  const { lookup } = deviceData
   const unlockedSet = new Set(unlocked.map((n) => n.toUpperCase()))
   const seen = new Map<string, number>()
   const extiByLine = new Map<number, PinAssignment[]>()
   const labelMap = new Map<string, string[]>()
 
   for (const assignment of config.pins) {
-    const pin = findPin(assignment.pin)
+    const pin = lookup.findPin(assignment.pin)
     if (!pin) {
       conflicts.push({
         severity: 'error',
@@ -37,11 +38,11 @@ export function checkConflicts(
     }
     seen.set(name, (seen.get(name) ?? 0) + 1)
 
-    if (!isGpio(pin)) {
+    if (!lookup.isGpio(pin)) {
       conflicts.push({
         severity: 'error',
         code: 'PIN_NOT_CONFIGURABLE',
-        message: `${name} 是电源引脚，不能配置为 GPIO`,
+        message: `${name} 是${pin.type === 'POWER' ? '电源' : pin.type === 'NC' ? '空' : '特殊'}引脚，不能配置为 GPIO`,
         pins: [name],
       })
       continue
@@ -72,7 +73,7 @@ export function checkConflicts(
 
     const exti = assignment.params.exti
     if (assignment.mode === 'INPUT' && exti?.enabled) {
-      const line = pinIndex(name)
+      const line = lookup.pinIndex(name)
       const list = extiByLine.get(line) ?? []
       list.push(assignment)
       extiByLine.set(line, list)
@@ -115,7 +116,7 @@ export function checkConflicts(
 export function portsInUse(config: ProjectConfig): string[] {
   const ports = new Set<string>()
   for (const assignment of config.pins) {
-    ports.add(portOf(assignment.pin))
+    ports.add(assignment.pin.charAt(1).toUpperCase())
   }
   return [...ports].sort()
 }

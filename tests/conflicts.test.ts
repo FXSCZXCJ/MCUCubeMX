@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { checkConflicts } from '../src/lib/conflicts'
-import { device } from '../src/data/device'
+import { devices } from '../src/data/device'
 import type { ProjectConfig } from '../src/types'
+
+const dd = devices['GD32L233RCT6']
 
 function config(pins: ProjectConfig['pins']): ProjectConfig {
   return { version: 1, device: 'GD32L233RCT6', pins, naming: { prefix: 'MX_' } }
@@ -15,19 +17,19 @@ const base = (pin: string, mode: 'INPUT' | 'OUTPUT' = 'INPUT') => ({
 
 describe('冲突检查', () => {
   it('同一引脚重复分配报错', () => {
-    const conflicts = checkConflicts(config([base('PA5'), base('PA5')]), device)
+    const conflicts = checkConflicts(config([base('PA5'), base('PA5')]), dd)
     expect(conflicts.some((c) => c.code === 'DUPLICATE_PIN' && c.severity === 'error')).toBe(true)
   })
 
   it('特殊引脚默认锁定，解锁后放行', () => {
-    const locked = checkConflicts(config([{ ...base('PB2'), mode: 'OUTPUT' }]), device)
+    const locked = checkConflicts(config([{ ...base('PB2'), mode: 'OUTPUT' }]), dd)
     expect(locked.some((c) => c.code === 'SPECIAL_PIN_LOCKED')).toBe(true)
-    const unlocked = checkConflicts(config([{ ...base('PB2'), mode: 'OUTPUT' }]), device, ['PB2'])
+    const unlocked = checkConflicts(config([{ ...base('PB2'), mode: 'OUTPUT' }]), dd, ['PB2'])
     expect(unlocked.some((c) => c.code === 'SPECIAL_PIN_LOCKED')).toBe(false)
   })
 
   it('晶振引脚作为 GPIO 给出警告', () => {
-    const conflicts = checkConflicts(config([base('PF0')]), device)
+    const conflicts = checkConflicts(config([base('PF0')]), dd)
     expect(conflicts.some((c) => c.code === 'SPECIAL_PIN_OSC' && c.severity === 'warning')).toBe(true)
   })
 
@@ -36,7 +38,7 @@ describe('冲突检查', () => {
       ...p,
       params: { pull: 'NONE' as const, exti: { enabled: true, edge: 'FALLING' as const } },
     }))
-    const conflicts = checkConflicts(config(pins), device)
+    const conflicts = checkConflicts(config(pins), dd)
     expect(conflicts.some((c) => c.code === 'EXTI_LINE_CONFLICT')).toBe(true)
   })
 
@@ -45,12 +47,12 @@ describe('冲突检查', () => {
       ...p,
       params: { pull: 'NONE' as const, exti: { enabled: true, edge: 'FALLING' as const } },
     }))
-    const conflicts = checkConflicts(config(pins), device)
+    const conflicts = checkConflicts(config(pins), dd)
     expect(conflicts.some((c) => c.code === 'EXTI_LINE_CONFLICT')).toBe(false)
   })
 
   it('电源引脚不可配置', () => {
-    const conflicts = checkConflicts(config([base('VDD')]), device)
+    const conflicts = checkConflicts(config([base('VDD')]), dd)
     expect(conflicts.some((c) => c.code === 'PIN_NOT_CONFIGURABLE')).toBe(true)
   })
 
@@ -60,8 +62,16 @@ describe('冲突检查', () => {
         { ...base('PA5'), mode: 'OUTPUT', label: 'LED_R' },
         { ...base('PA6'), mode: 'OUTPUT', label: 'LED_R' },
       ]),
-      device,
+      dd,
     )
     expect(conflicts.some((c) => c.code === 'DUPLICATE_LABEL')).toBe(true)
+  })
+
+  it('F427: NC 引脚不可配置，BOOT0 默认锁定', () => {
+    const f427 = devices['GD32F427VE']
+    const nc = checkConflicts(config([base('NC')]), f427)
+    expect(nc.some((c) => c.code === 'PIN_NOT_CONFIGURABLE')).toBe(true)
+    const boot = checkConflicts(config([base('BOOT0')]), f427)
+    expect(boot.some((c) => c.code === 'SPECIAL_PIN_LOCKED')).toBe(true)
   })
 })

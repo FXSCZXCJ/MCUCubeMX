@@ -15,7 +15,7 @@ export const GPIO_H_TEMPLATE = `/* USER CODE BEGIN Header */
 #ifndef __GPIO_H
 #define __GPIO_H
 
-#include "gd32l23x.h"
+#include "<%= includeHeader %>"
 
 <% groups.forEach(function(g){ %>
 /* ==================== <%= g.name %> ==================== */
@@ -73,17 +73,24 @@ void <%= prefix %>GPIO_Init(void)
 <% if (hasExti) { %>
 /**
   * @brief  初始化外部中断（EXTI）
+<% if (nvicGroup) { %>
+  * @note   NVIC 优先级分组为 <%= prigroupMacro %>，nvic_irq_enable 使用（抢占, 子）优先级
+<% } else { %>
   * @note   Cortex-M23 优先级分组固定，nvic_irq_enable 仅需一个优先级参数
+<% } %>
   */
 void <%= prefix %>EXTI_Init(void)
 {
+<% if (nvicGroup) { %>
+    nvic_priority_group_set(<%= prigroupMacro %>);
+<% } %>
 <% extiPins.forEach(function(p){ %>
     /* <%= p.label %> (<%= p.pinName %>) */
-    exti_init(EXTI_<%= p.line %>, EXTI_INTERRUPT, EXTI_TRIG_<%= p.edge %>);
+    exti_init(EXTI_<%= p.line %>, EXTI_INTERRUPT, <%= p.edge %>);
 
 <% }); %>
 <% irqs.forEach(function(irq){ %>
-    nvic_irq_enable(<%= irq %>_IRQn, 0);
+    nvic_irq_enable(<%= irq %>_IRQn, 0<%= nvicGroup ? ', 0' : '' %>);
 <% }); %>
 }
 <% } %>
@@ -98,7 +105,7 @@ export const APP_IT_C_TEMPLATE = `/**
   ******************************************************************************
   */
 
-#include "gd32l23x.h"
+#include "<%= includeHeader %>"
 #include "gpio.h"
 
 <% handlers.forEach(function(h){ %>

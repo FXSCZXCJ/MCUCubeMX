@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { device } from '../data/device'
-import { PIN_COLORS, SVG_SIZE, BODY, MARGIN, pinGeometry, type PinState } from '../lib/packageSvg'
+import { PIN_COLORS, packageGeometry, pinGeometry, type PinState } from '../lib/packageSvg'
 import { useProjectStore } from '../stores/project'
 import type { PinDef } from '../types'
 
 const store = useProjectStore()
+const device = computed(() => store.deviceData.device)
+const geo = computed(() => packageGeometry(device.value))
 const viewRef = ref<HTMLElement | null>(null)
 const autoFit = ref(true)
 const manualFactor = ref(1)
@@ -31,10 +32,11 @@ function updateAutoZoom() {
   const width = el.clientWidth
   const top = el.getBoundingClientRect().top
   const availHeight = window.innerHeight - top - 12 - CHROME_HEIGHT
-  autoZoom.value = Math.min(
-    MAX_ZOOM,
-    Math.max(MIN_ZOOM, Math.min(width / SVG_SIZE, availHeight / SVG_SIZE)),
-  )
+      const size = geo.value.svgSize
+      autoZoom.value = Math.min(
+        MAX_ZOOM,
+        Math.max(MIN_ZOOM, Math.min(width / size, availHeight / size)),
+      )
 }
 
 onMounted(() => {
@@ -77,9 +79,9 @@ function onPinClick(pin: PinDef) {
 }
 
 const pins = computed(() =>
-  device.pins.map((pin) => ({
+  device.value.pins.map((pin) => ({
     pin,
-    g: pinGeometry(pin),
+    g: pinGeometry(pin, geo.value),
     color: PIN_COLORS[stateOf(pin)],
     selected: store.selectedPin === pin.name,
   })),
@@ -110,34 +112,34 @@ const LEGEND_LABELS: Record<string, string> = {
     </div>
     <div class="package-stage">
       <svg
-        :width="SVG_SIZE * effectiveZoom"
-        :height="SVG_SIZE * effectiveZoom"
-        :viewBox="`0 0 ${SVG_SIZE} ${SVG_SIZE}`"
+        :width="geo.svgSize * effectiveZoom"
+        :height="geo.svgSize * effectiveZoom"
+        :viewBox="`0 0 ${geo.svgSize} ${geo.svgSize}`"
         class="package-svg"
       >
         <!-- 芯片本体 -->
         <rect
-          :x="MARGIN"
-          :y="MARGIN"
-          :width="BODY"
-          :height="BODY"
+          :x="geo.margin"
+          :y="geo.margin"
+          :width="geo.body"
+          :height="geo.body"
           rx="10"
           fill="#ffffff"
           stroke="#374151"
           stroke-width="2"
         />
         <text
-          :x="SVG_SIZE / 2"
-          :y="SVG_SIZE / 2 - 8"
+          :x="geo.svgSize / 2"
+          :y="geo.svgSize / 2 - 8"
           text-anchor="middle"
           font-size="16"
           font-weight="600"
           fill="#374151"
         >
-          GD32L233RCT6
+          {{ device.device }}
         </text>
-        <text :x="SVG_SIZE / 2" :y="SVG_SIZE / 2 + 14" text-anchor="middle" font-size="12" fill="#6b7280">
-          LQFP64 · Cortex-M23
+        <text :x="geo.svgSize / 2" :y="geo.svgSize / 2 + 14" text-anchor="middle" font-size="12" fill="#6b7280">
+          {{ device.package }} · {{ device.core }}
         </text>
 
         <g

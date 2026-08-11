@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
-import { findPin } from '../data/device'
 import { useProjectStore } from '../stores/project'
 import type { ExtiEdge, PinMode } from '../types'
 
 const store = useProjectStore()
 
-const pin = computed(() => (store.selectedPin ? findPin(store.selectedPin) : undefined))
+const pin = computed(() =>
+  store.selectedPin ? store.deviceData.lookup.findPin(store.selectedPin) : undefined,
+)
 const assignment = computed(() => (store.selectedPin ? store.assignments[store.selectedPin] : undefined))
+const speedOptions = computed(() => store.deviceData.device.firmware.speeds)
 const locked = computed(() => {
   const p = pin.value
   return Boolean(p && p.special && ['nrst', 'boot', 'swd'].includes(p.special) && !store.unlocked.includes(p.name))
@@ -124,11 +126,9 @@ function clear() {
               </el-radio-group>
             </el-form-item>
             <el-form-item label="速度">
-              <el-select v-model="form.speed">
-                <el-option label="2 MHz" value="2" />
-                <el-option label="10 MHz" value="10" />
-                <el-option label="50 MHz" value="50" />
-              </el-select>
+            <el-select v-model="form.speed">
+              <el-option v-for="s in speedOptions" :key="s" :label="`${s} MHz`" :value="s" />
+            </el-select>
             </el-form-item>
             <el-form-item label="初始电平">
               <el-radio-group v-model="form.level">

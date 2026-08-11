@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import type { Conflict, PinAssignment, PinMode, ProjectConfig } from '../types'
-import { device } from '../data/device'
+import { getDeviceData } from '../data/device'
+import type { DeviceData } from '../data/device'
 import { checkConflicts } from '../lib/conflicts'
 
 function newAssignment(mode: PinMode, pin: string): PinAssignment {
@@ -19,8 +20,7 @@ function newAssignment(mode: PinMode, pin: string): PinAssignment {
 
 export const useProjectStore = defineStore('project', {
   state: () => ({
-    device: device.device,
-    packageName: device.package,
+    deviceId: 'GD32L233RCT6' as string,
     projectName: 'untitled',
     prefix: 'MX_',
     assignments: {} as Record<string, PinAssignment>,
@@ -30,7 +30,7 @@ export const useProjectStore = defineStore('project', {
 
   getters: {
     conflicts(): Conflict[] {
-      return checkConflicts(this.config, device, this.unlocked)
+      return checkConflicts(this.config, this.deviceData, this.unlocked)
     },
     errors(): Conflict[] {
       return this.conflicts.filter((c) => c.severity === 'error')
@@ -44,14 +44,22 @@ export const useProjectStore = defineStore('project', {
     config(): ProjectConfig {
       return {
         version: 1,
-        device: this.device as ProjectConfig['device'],
+        device: this.deviceId,
         pins: Object.values(this.assignments),
         naming: { prefix: this.prefix },
       }
     },
+    deviceData(): DeviceData {
+      return getDeviceData(this.deviceId)
+    },
   },
 
   actions: {
+    switchDevice(id: string) {
+      if (id === this.deviceId || !getDeviceData(id)) return
+      this.deviceId = id
+      this.clearAll()
+    },
     selectPin(name: string | null) {
       this.selectedPin = name
     },

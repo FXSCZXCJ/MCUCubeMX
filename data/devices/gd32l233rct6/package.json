@@ -4,6 +4,16 @@
   "core": "Cortex-M23",
   "flash": "256KB",
   "sram": "32KB",
+  "pinsPerSide": 16,
+  "firmware": {
+    "header": "gd32l23x.h",
+    "rcuPrefix": "RCU_GPIO",
+    "speeds": ["2", "10", "50"],
+    "extiEdgePrefix": "EXTI_TRIG_",
+    "nvic": { "group": false },
+    "define": "GD32L233",
+    "core": "Cortex-M23"
+  },
   "source": "GD32L233xx Datasheet Rev1.9, Table 2-3 (GD32L233Rx LQFP64 pin definitions)",
   "pins": [
     { "number": 1, "name": "PD6", "type": "IO", "level": "5VT", "side": "top", "alternate": ["USART1_RX", "EVENTOUT", "SPI0_MOSI", "LPTIMER_IN1"], "additional": ["VSLCD"] },

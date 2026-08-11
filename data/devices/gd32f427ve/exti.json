@@ -1,0 +1,406 @@
+{
+ "device": "GD32F427VE",
+ "source": "GD32F4xx 固件库中断向量（EXTI0..EXTI4, EXTI5_9, EXTI10_15）；EXTI 线 = GPIO 引脚号，端口 A-E",
+ "entries": [
+  {
+   "pin": "PA0",
+   "line": 0,
+   "irq": "EXTI0"
+  },
+  {
+   "pin": "PA1",
+   "line": 1,
+   "irq": "EXTI1"
+  },
+  {
+   "pin": "PA2",
+   "line": 2,
+   "irq": "EXTI2"
+  },
+  {
+   "pin": "PA3",
+   "line": 3,
+   "irq": "EXTI3"
+  },
+  {
+   "pin": "PA4",
+   "line": 4,
+   "irq": "EXTI4"
+  },
+  {
+   "pin": "PA5",
+   "line": 5,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PA6",
+   "line": 6,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PA7",
+   "line": 7,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PA8",
+   "line": 8,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PA9",
+   "line": 9,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PA10",
+   "line": 10,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PA11",
+   "line": 11,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PA12",
+   "line": 12,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PA13",
+   "line": 13,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PA14",
+   "line": 14,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PA15",
+   "line": 15,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PB0",
+   "line": 0,
+   "irq": "EXTI0"
+  },
+  {
+   "pin": "PB1",
+   "line": 1,
+   "irq": "EXTI1"
+  },
+  {
+   "pin": "PB2",
+   "line": 2,
+   "irq": "EXTI2"
+  },
+  {
+   "pin": "PB3",
+   "line": 3,
+   "irq": "EXTI3"
+  },
+  {
+   "pin": "PB4",
+   "line": 4,
+   "irq": "EXTI4"
+  },
+  {
+   "pin": "PB5",
+   "line": 5,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PB6",
+   "line": 6,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PB7",
+   "line": 7,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PB8",
+   "line": 8,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PB9",
+   "line": 9,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PB10",
+   "line": 10,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PB11",
+   "line": 11,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PB12",
+   "line": 12,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PB13",
+   "line": 13,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PB14",
+   "line": 14,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PB15",
+   "line": 15,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PC0",
+   "line": 0,
+   "irq": "EXTI0"
+  },
+  {
+   "pin": "PC1",
+   "line": 1,
+   "irq": "EXTI1"
+  },
+  {
+   "pin": "PC2",
+   "line": 2,
+   "irq": "EXTI2"
+  },
+  {
+   "pin": "PC3",
+   "line": 3,
+   "irq": "EXTI3"
+  },
+  {
+   "pin": "PC4",
+   "line": 4,
+   "irq": "EXTI4"
+  },
+  {
+   "pin": "PC5",
+   "line": 5,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PC6",
+   "line": 6,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PC7",
+   "line": 7,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PC8",
+   "line": 8,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PC9",
+   "line": 9,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PC10",
+   "line": 10,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PC11",
+   "line": 11,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PC12",
+   "line": 12,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PC13",
+   "line": 13,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PC14",
+   "line": 14,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PC15",
+   "line": 15,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PD0",
+   "line": 0,
+   "irq": "EXTI0"
+  },
+  {
+   "pin": "PD1",
+   "line": 1,
+   "irq": "EXTI1"
+  },
+  {
+   "pin": "PD2",
+   "line": 2,
+   "irq": "EXTI2"
+  },
+  {
+   "pin": "PD3",
+   "line": 3,
+   "irq": "EXTI3"
+  },
+  {
+   "pin": "PD4",
+   "line": 4,
+   "irq": "EXTI4"
+  },
+  {
+   "pin": "PD5",
+   "line": 5,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PD6",
+   "line": 6,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PD7",
+   "line": 7,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PD8",
+   "line": 8,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PD9",
+   "line": 9,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PD10",
+   "line": 10,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PD11",
+   "line": 11,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PD12",
+   "line": 12,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PD13",
+   "line": 13,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PD14",
+   "line": 14,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PD15",
+   "line": 15,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PE0",
+   "line": 0,
+   "irq": "EXTI0"
+  },
+  {
+   "pin": "PE1",
+   "line": 1,
+   "irq": "EXTI1"
+  },
+  {
+   "pin": "PE2",
+   "line": 2,
+   "irq": "EXTI2"
+  },
+  {
+   "pin": "PE3",
+   "line": 3,
+   "irq": "EXTI3"
+  },
+  {
+   "pin": "PE4",
+   "line": 4,
+   "irq": "EXTI4"
+  },
+  {
+   "pin": "PE5",
+   "line": 5,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PE6",
+   "line": 6,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PE7",
+   "line": 7,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PE8",
+   "line": 8,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PE9",
+   "line": 9,
+   "irq": "EXTI5_9"
+  },
+  {
+   "pin": "PE10",
+   "line": 10,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PE11",
+   "line": 11,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PE12",
+   "line": 12,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PE13",
+   "line": 13,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PE14",
+   "line": 14,
+   "irq": "EXTI10_15"
+  },
+  {
+   "pin": "PE15",
+   "line": 15,
+   "irq": "EXTI10_15"
+  }
+ ]
+}

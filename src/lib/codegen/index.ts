@@ -1,7 +1,7 @@
 import * as ejs from 'ejs'
 import JSZip from 'jszip'
 import type { GeneratedFile, PinAssignment, PinDef, ProjectConfig } from '../../types'
-import { findPin, gpioPinMacro, gpioPortMacro, pinIndex, portOf } from '../../data/device'
+import type { DeviceData } from '../../data/device'
 import { APP_IT_C_TEMPLATE, GPIO_C_TEMPLATE, GPIO_H_TEMPLATE, README_TEMPLATE } from './templates'
 
 export function sanitizeLabel(label: string): string {
@@ -44,7 +44,7 @@ interface ExtiOutPin extends OutPin {
   edge: string
 }
 
-function prepare(config: ProjectConfig): {
+function prepare(config: ProjectConfig, deviceData: DeviceData): {
   prepared: PreparedPin[]
   outputPins: OutPin[]
   inputPins: OutPin[]
@@ -53,7 +53,7 @@ function prepare(config: ProjectConfig): {
 } {
   const prepared: PreparedPin[] = []
   for (const assignment of config.pins) {
-    const pinDef = findPin(assignment.pin)
+    const pinDef = deviceData.lookup.findPin(assignment.pin)
     if (!pinDef) continue
     prepared.push({
       assignment,
@@ -68,8 +68,8 @@ function prepare(config: ProjectConfig): {
     .map((p) => ({
       label: p.label,
       pinName: p.pinDef.name,
-      port: portOf(p.pinDef.name),
-      pin: pinIndex(p.pinDef.name),
+      port: deviceData.lookup.portOf(p.pinDef.name),
+      pin: deviceData.lookup.pinIndex(p.pinDef.name),
       otype: p.assignment.params.outputType === 'OD' ? 'OD' : 'PP',
       speed: p.assignment.params.speed ?? '50',
       level: p.assignment.params.level ?? 'HIGH',
@@ -82,8 +82,8 @@ function prepare(config: ProjectConfig): {
     .map((p) => ({
       label: p.label,
       pinName: p.pinDef.name,
-      port: portOf(p.pinDef.name),
-      pin: pinIndex(p.pinDef.name),
+      port: deviceData.lookup.portOf(p.pinDef.name),
+      pin: deviceData.lookup.pinIndex(p.pinDef.name),
       pull: p.assignment.params.pull ?? 'NONE',
     }))
 
@@ -93,9 +93,9 @@ function prepare(config: ProjectConfig): {
     .map((p) => ({
       label: p.label,
       pinName: p.pinDef.name,
-      port: portOf(p.pinDef.name),
-      pin: pinIndex(p.pinDef.name),
-      line: pinIndex(p.pinDef.name),
+      port: deviceData.lookup.portOf(p.pinDef.name),
+      pin: deviceData.lookup.pinIndex(p.pinDef.name),
+      line: deviceData.lookup.pinIndex(p.pinDef.name),
       edge: EDGE_MACROS[p.assignment.params.exti!.edge] ?? 'RISING',
     }))
 
@@ -110,10 +110,11 @@ function prepare(config: ProjectConfig): {
   return { prepared, outputPins, inputPins, extiPins, irqs }
 }
 
-export function generateProject(config: ProjectConfig): GeneratedFile[] {
+export function generateProject(config: ProjectConfig, deviceData: DeviceData): GeneratedFile[] {
   const prefix = config.naming.prefix || 'MX_'
-  const { prepared, outputPins, inputPins, extiPins, irqs } = prepare(config)
+  const { prepared, outputPins, inputPins, extiPins, irqs } = prepare(config, deviceData)
   const hasExti = extiPins.length > 0
+  const fw = deviceData.device.firmware
 
   const groupMap = new Map<string, { label: string; macroPin: string; macroPort: string }[]>()
   for (const p of prepared) {
@@ -121,15 +122,15 @@ export function generateProject(config: ProjectConfig): GeneratedFile[] {
     const list = groupMap.get(group) ?? []
     list.push({
       label: p.label,
-      macroPin: gpioPinMacro(p.pinDef.name),
-      macroPort: gpioPortMacro(p.pinDef.name),
+      macroPin: deviceData.lookup.gpioPinMacro(p.pinDef.name),
+      macroPort: deviceData.lookup.gpioPortMacro(p.pinDef.name),
     })
     groupMap.set(group, list)
   }
   const groups = [...groupMap.entries()].map(([name, pins]) => ({ name, pins }))
 
   const ports = new Set<string>()
-  for (const p of prepared) ports.add(portOf(p.pinDef.name))
+  for (const p of prepared) ports.add(deviceData.lookup.portOf(p.pinDef.name))
   const portList = [...ports].sort()
 
   const handlers = irqs.map((irq) => ({
@@ -140,7 +141,14 @@ export function generateProject(config: ProjectConfig): GeneratedFile[] {
       .sort((a, b) => a - b),
   }))
 
-  const base = { device: config.device, prefix, hasExti }
+  const base = {
+    device: config.device,
+    prefix,
+    hasExti,
+    includeHeader: fw.header,
+    nvicGroup: fw.nvic.group,
+    prigroupMacro: fw.nvic.groupMacro ?? '',
+  }
   const files: GeneratedFile[] = [
     {
       path: 'gpio.h',
@@ -153,7 +161,7 @@ export function generateProject(config: ProjectConfig): GeneratedFile[] {
         ports: portList,
         outputPins,
         inputPins,
-        extiPins,
+        extiPins: extiPins.map((p) => ({ ...p, edge: `${fw.extiEdgePrefix}${p.edge}` })),
         irqs,
       }),
     },
@@ -174,7 +182,7 @@ export function generateProject(config: ProjectConfig): GeneratedFile[] {
   if (hasExti) {
     files.splice(2, 0, {
       path: 'app_it.c',
-      content: render(APP_IT_C_TEMPLATE, { handlers }),
+      content: render(APP_IT_C_TEMPLATE, { includeHeader: fw.header, handlers }),
     })
   }
   return files
@@ -185,9 +193,9 @@ function render(template: string, data: object): string {
   return compiled(data) as string
 }
 
-export async function exportZip(config: ProjectConfig): Promise<Blob> {
+export async function exportZip(config: ProjectConfig, deviceData: DeviceData): Promise<Blob> {
   const zip = new JSZip()
-  for (const file of generateProject(config)) {
+  for (const file of generateProject(config, deviceData)) {
     zip.file(file.path, file.content)
   }
   return zip.generateAsync({ type: 'blob' })

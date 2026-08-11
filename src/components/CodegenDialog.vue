@@ -10,14 +10,14 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const store = useProjectStore()
 const activeTab = ref('gpio.h')
 
-const files = computed(() => generateProject(store.config))
+const files = computed(() => generateProject(store.config, store.deviceData))
 
 function close() {
   emit('update:modelValue', false)
 }
 
 async function downloadZip() {
-  const blob = await exportZip(store.config)
+  const blob = await exportZip(store.config, store.deviceData)
   downloadBlob(blob, `${store.projectName || 'project'}-code.zip`)
   ElMessage.success('代码包已下载')
 }

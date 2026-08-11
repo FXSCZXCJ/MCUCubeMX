@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { generateProject } from '../src/lib/codegen/index'
+import { getDeviceData } from '../src/data/device'
 import type { ProjectConfig } from '../src/types'
 
 const configPath = process.argv[2]
@@ -12,7 +13,7 @@ if (!configPath || !outDir) {
 }
 
 const config = JSON.parse(readFileSync(configPath, 'utf8')) as ProjectConfig
-const files = generateProject(config)
+const files = generateProject(config, getDeviceData(config.device))
 mkdirSync(outDir, { recursive: true })
 for (const file of files) {
   writeFileSync(path.join(outDir, file.path), file.content)

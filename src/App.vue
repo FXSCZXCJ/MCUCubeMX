@@ -8,6 +8,7 @@ import ConflictsPanel from './components/ConflictsPanel.vue'
 import CodegenDialog from './components/CodegenDialog.vue'
 import { useProjectStore } from './stores/project'
 import { downloadBlob } from './lib/codegen'
+import { deviceIds } from './data/device'
 import type { ProjectConfig } from './types'
 
 const store = useProjectStore()
@@ -26,8 +27,11 @@ function onFileSelected(event: Event) {
   reader.onload = () => {
     try {
       const config = JSON.parse(String(reader.result)) as ProjectConfig
-      if (config.version !== 1 || config.device !== store.device) {
+      if (config.version !== 1 || !deviceIds.includes(config.device)) {
         throw new Error('配置文件版本或器件不匹配')
+      }
+      if (config.device !== store.deviceId) {
+        store.switchDevice(config.device)
       }
       store.loadConfig(config)
       ElMessage.success('配置导入成功')
@@ -61,7 +65,15 @@ async function clearAll() {
     <header class="app-header">
       <div class="brand">
         <strong>MCUCubeMX</strong>
-        <span class="badge">{{ store.device }} · {{ store.packageName }}</span>
+        <el-select
+          :model-value="store.deviceId"
+          size="small"
+          class="device-select"
+          @update:model-value="store.switchDevice($event)"
+        >
+          <el-option v-for="id in deviceIds" :key="id" :label="id" :value="id" />
+        </el-select>
+        <span class="badge">{{ store.deviceData.device.package }} · {{ store.deviceData.device.core }}</span>
       </div>
       <div class="toolbar">
         <el-input
@@ -148,6 +160,9 @@ async function clearAll() {
   background: #f3f4f6;
   border-radius: 10px;
   padding: 2px 10px;
+}
+.device-select {
+  width: 150px;
 }
 .toolbar {
   display: flex;
