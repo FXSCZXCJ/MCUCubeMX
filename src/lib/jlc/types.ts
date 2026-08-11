@@ -36,6 +36,8 @@ export interface EdaPinInfo {
   name: string
   x: number
   y: number
+  /** 引脚旋转角（端口应同向摆放） */
+  rotation?: number
   net: string | null
   /** 连接方式：网络端口 / 线段 / 无连接 */
   conn?: 'port' | 'wire' | 'none'
@@ -103,6 +105,8 @@ export interface ExportChangeItem {
   /** 引脚在原理图上的坐标（放置标签用） */
   x?: number
   y?: number
+  /** 端口摆放旋转角（与 MCU 引脚同向） */
+  rotation?: number
 }
 
 export interface SyncAction {
@@ -111,6 +115,7 @@ export interface SyncAction {
   x: number
   y: number
   direction: 'IN' | 'OUT'
+  rotation?: number
   portId?: string | null
   oldNet?: string | null
 }

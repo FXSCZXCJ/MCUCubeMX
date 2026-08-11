@@ -238,6 +238,7 @@ describe('导出到 EDA 计划构建', () => {
       oldNet: null,
       newNet: 'LED_R',
       action: 'place-port',
+      rotation: 0,
     })
     expect(plan.kept.map((c) => c.pin)).toEqual(['PA0'])
     const skippedReason = new Map(plan.skipped.map((s) => [s.pin, s.skipReason]))

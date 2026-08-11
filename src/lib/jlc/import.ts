@@ -298,6 +298,7 @@ export function buildExportPlan(
       mode: assignment.mode,
       x: edaPin.x,
       y: edaPin.y,
+      rotation: edaPin.rotation ?? 0,
     })
   }
 

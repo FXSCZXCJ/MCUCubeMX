@@ -199,6 +199,8 @@ for (const p of pins || []) {
   const name = await p.getState_PinName();
   const x = await p.getState_X();
   const y = await p.getState_Y();
+  let rotation = 0;
+  try { rotation = (await p.getState_Rotation()) || 0; } catch {}
   let conn = 'none';
   let portId = null;
   let portNet = null;
@@ -227,6 +229,7 @@ for (const p of pins || []) {
     name,
     x,
     y,
+    rotation,
     net: conn === 'port' ? portNet : nets.size ? [...nets].join('|') : null,
     conn,
     portId,
@@ -304,7 +307,7 @@ for (const a of actions.filter((x) => x.action === 'rename-wire')) {
 }
 for (const a of actions.filter((x) => x.action === 'place-port')) {
   try {
-    await eda.sch_PrimitiveComponent.createNetPort(a.direction, a.net, a.x, a.y, 0, false);
+    await eda.sch_PrimitiveComponent.createNetPort(a.direction, a.net, a.x, a.y, a.rotation || 0, false);
     placed++;
   } catch (err) {
     failures.push('新增端口 ' + a.net + ': ' + (err && err.message));

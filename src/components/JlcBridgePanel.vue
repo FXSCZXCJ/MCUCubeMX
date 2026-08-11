@@ -431,6 +431,7 @@ async function confirmExport() {
       x: c.x ?? 0,
       y: c.y ?? 0,
       direction: c.mode === 'OUTPUT' ? 'OUT' : 'IN',
+      rotation: c.rotation ?? 0,
       portId: c.portId,
       oldNet: c.oldNet,
     }))
