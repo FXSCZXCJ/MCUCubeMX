@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { PIN_COLORS, packageGeometry, pinGeometry, type PinState } from '../lib/packageSvg'
+import {
+  PIN_COLORS,
+  outsideLabelDy,
+  packageGeometry,
+  pinGeometry,
+  type PinState,
+} from '../lib/packageSvg'
 import { useProjectStore } from '../stores/project'
 import type { PinDef } from '../types'
 
@@ -79,12 +85,16 @@ function onPinClick(pin: PinDef) {
 }
 
 const pins = computed(() =>
-  device.value.pins.map((pin) => ({
-    pin,
-    g: pinGeometry(pin, geo.value),
-    color: PIN_COLORS[stateOf(pin)],
-    selected: store.selectedPin === pin.name,
-  })),
+  device.value.pins.map((pin) => {
+    const g = pinGeometry(pin, geo.value)
+    return {
+      pin,
+      g,
+      labelDy: outsideLabelDy(pin, geo.value.pinsPerSide),
+      color: PIN_COLORS[stateOf(pin)],
+      selected: store.selectedPin === pin.name,
+    }
+  }),
 )
 
 const LEGEND_LABELS: Record<string, string> = {
@@ -199,9 +209,9 @@ function displayLabel(pin: PinDef): string | undefined {
             {{ item.pin.number }}
           </text>
           <text
-            :x="item.g.labelX"
-            :y="item.g.labelY"
-            :text-anchor="item.g.anchor"
+            :x="item.g.innerX"
+            :y="item.g.innerY"
+            :text-anchor="item.g.innerAnchor"
             font-size="9"
             fill="#1f2329"
           >
@@ -209,9 +219,9 @@ function displayLabel(pin: PinDef): string | undefined {
           </text>
           <text
             v-if="displayLabel(item.pin) && displayLabel(item.pin) !== item.pin.name"
-            :x="item.g.innerX"
-            :y="item.g.innerY"
-            :text-anchor="item.g.innerAnchor"
+            :x="item.g.labelX"
+            :y="item.g.labelY + item.labelDy"
+            :text-anchor="item.g.anchor"
             font-size="7"
             fill="#455a64"
           >

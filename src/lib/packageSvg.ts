@@ -2,7 +2,8 @@ import type { DevicePackage, PinDef } from '../types'
 
 export const PAD_W = 14
 export const PAD_LEN = 20
-export const LABEL_MARGIN = 40
+// 外侧标签留白：容纳最长 8 字符的配置标签（左右侧水平延伸不截断）
+export const LABEL_MARGIN = 48
 // 相邻引脚名称标签不重叠所需的最小间距（已在 LQFP64/LQFP100 上验证）
 export const PITCH = 28.8
 
@@ -19,6 +20,14 @@ export function packageGeometry(device: DevicePackage): PackageGeometry {
   const body = Math.round(PITCH * pinsPerSide)
   const margin = PAD_LEN + LABEL_MARGIN
   return { body, margin, svgSize: body + margin * 2, pitch: PITCH, pinsPerSide }
+}
+
+/** 上下侧外侧标签交错两行（上侧向上、下侧向下错开 10），规避相邻长标签重叠 */
+export function outsideLabelDy(pin: PinDef, pinsPerSide: number): number {
+  const sideIndex = (pin.number - 1) % pinsPerSide
+  if (pin.side === 'top') return sideIndex % 2 === 0 ? 0 : -10
+  if (pin.side === 'bottom') return sideIndex % 2 === 0 ? 0 : 10
+  return 0
 }
 
 export interface PinGeometry {
