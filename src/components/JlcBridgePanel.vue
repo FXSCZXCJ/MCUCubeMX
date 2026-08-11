@@ -103,11 +103,15 @@ const otherBoards = computed(() =>
   (project.value?.boards ?? []).filter((b) => b.name !== project.value?.currentBoard),
 )
 
-const syncModeDesc = computed(() =>
-  prefs.value.syncMode === 'wire'
-    ? '线段模式：改线段网络名（不删线段、不放端口）'
-    : '端口模式：删线段并放置 IN/OUT 端口',
-)
+const syncModeDesc = computed(() => {
+  if (prefs.value.syncMode === 'wire') {
+    return '线段模式：改线段网络名（不删线段、不放端口）'
+  }
+  if (prefs.value.syncMode === 'convert') {
+    return '转化为网络端口：删除已有线段并在引脚放置 IN/OUT 端口'
+  }
+  return '端口模式：新增/更新/更换端口（不删除已有线段）'
+})
 
 const kindLabels: Record<ImportChangeKind, string> = {
   add: '新增',
@@ -628,6 +632,7 @@ onMounted(() => {
           <el-radio-group v-model="prefs.syncMode" size="small" @change="savePrefs(prefs)">
             <el-radio-button value="port">端口模式</el-radio-button>
             <el-radio-button value="wire">线段模式</el-radio-button>
+            <el-radio-button value="convert">转化为网络端口</el-radio-button>
           </el-radio-group>
           <span class="hint">首次手动配置一次，之后自动恢复所选 MCU</span>
         </div>
@@ -897,7 +902,7 @@ onMounted(() => {
         :closable="false"
         show-icon
         :title="syncModeDesc"
-        :description="`端口改名/方向调整→删除重放；配置属性（模式/标签/上下拉/EXTI/输出参数）写入 MCU 元件本身；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚${prefs.syncMode === 'wire' ? '，线段模式下未连线引脚' : ''}）。`"
+        :description="`端口改名/方向调整→删除重放；配置属性（模式/标签/上下拉/EXTI/输出参数）写入 MCU 元件本身；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚/按当前模式不处理）。`"
         style="margin-bottom: 8px"
       />
       <el-table :data="exportPreview.changes" size="small" max-height="280">

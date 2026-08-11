@@ -195,7 +195,7 @@ export function buildExportPlan(
   device: DeviceData,
   assignments: PinAssignment[],
   pinMap: EdaPinInfo[],
-  mode: 'port' | 'wire' = 'port',
+  mode: 'port' | 'wire' | 'convert' = 'port',
 ): ExportPlan {
   const byCanonical = new Map<string, EdaPinInfo>()
   for (const p of pinMap) {
@@ -309,21 +309,48 @@ export function buildExportPlan(
       })
       continue
     }
-    if (conn === 'none' && mode === 'wire') {
-      // 线段模式下未连线的引脚没有线段可改，跳过
+    if (conn === 'none') {
+      // 线段模式：未连线没有线段可改，跳过；端口/转化模式：直接放置端口
+      if (mode === 'wire') {
+        items.push({
+          pin: assignment.pin,
+          edaName: edaPin.name,
+          oldNet: null,
+          newNet: assignment.label,
+          status: 'skip',
+          skipReason: 'EDA 中该引脚未连线，请先在原理图连线',
+        })
+        continue
+      }
       items.push({
         pin: assignment.pin,
         edaName: edaPin.name,
         oldNet: null,
         newNet: assignment.label,
-        status: 'skip',
-        skipReason: 'EDA 中该引脚未连线，请先在原理图连线',
+        status: 'change',
+        action: 'place-port',
+        mode: assignment.mode,
+        x: edaPin.x,
+        y: edaPin.y,
+        rotation: portRotation(edaPin.rotation, assignment.mode),
       })
       continue
     }
-    // 端口模式：删除线段并在引脚处放置网络端口；线段模式：改线段网络名
-    const action =
-      conn === 'wire' ? (mode === 'wire' ? 'rename-wire' : 'wire-to-port') : 'place-port'
+
+    // conn === 'wire'
+    if (mode === 'port') {
+      // 端口模式不删除已有线段，跳过（如需转换请选“转化为网络端口”）
+      items.push({
+        pin: assignment.pin,
+        edaName: edaPin.name,
+        oldNet,
+        newNet: assignment.label,
+        status: 'skip',
+        skipReason: '已有线段连接，如需转为网络端口请选择“转化为网络端口”模式',
+      })
+      continue
+    }
+    const action = mode === 'convert' ? 'wire-to-port' : 'rename-wire'
     items.push({
       pin: assignment.pin,
       edaName: edaPin.name,
