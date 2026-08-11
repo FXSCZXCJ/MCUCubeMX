@@ -11,8 +11,10 @@ const autoFit = ref(true)
 const manualFactor = ref(1)
 const autoZoom = ref(1)
 
-const MIN_ZOOM = 0.6
+const MIN_ZOOM = 0.4
 const MAX_ZOOM = 2.5
+// 面板内固定占用：工具栏 + 图例 + 间距 + 底部边距（用于按可用高度自适应）
+const CHROME_HEIGHT = 86
 
 const effectiveZoom = computed(() =>
   Math.min(
@@ -23,17 +25,29 @@ const effectiveZoom = computed(() =>
 
 let observer: ResizeObserver | null = null
 
+function updateAutoZoom() {
+  const el = viewRef.value
+  if (!el) return
+  const width = el.clientWidth
+  const top = el.getBoundingClientRect().top
+  const availHeight = window.innerHeight - top - 12 - CHROME_HEIGHT
+  autoZoom.value = Math.min(
+    MAX_ZOOM,
+    Math.max(MIN_ZOOM, Math.min(width / SVG_SIZE, availHeight / SVG_SIZE)),
+  )
+}
+
 onMounted(() => {
-  observer = new ResizeObserver((entries) => {
-    const width = entries[0]?.contentRect.width
-    if (width) {
-      autoZoom.value = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, width / SVG_SIZE))
-    }
-  })
+  observer = new ResizeObserver(updateAutoZoom)
   if (viewRef.value) observer.observe(viewRef.value)
+  window.addEventListener('resize', updateAutoZoom)
+  updateAutoZoom()
 })
 
-onUnmounted(() => observer?.disconnect())
+onUnmounted(() => {
+  observer?.disconnect()
+  window.removeEventListener('resize', updateAutoZoom)
+})
 
 function changeManual(delta: number) {
   manualFactor.value = Math.min(2, Math.max(0.5, Math.round((manualFactor.value + delta) * 20) / 20))
