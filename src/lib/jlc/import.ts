@@ -9,7 +9,7 @@ import type {
   ImportPlanItem,
   ImportSkipItem,
 } from './types'
-import type { PinAssignment } from '../../types'
+import type { PinAssignment, PinMode } from '../../types'
 
 const POWER_PIN = /^(VDD|VSS|VBAT|VDDA|VSSA|VREFP|VREFN|VCAP|VIN|VOUT|AVDD|AVSS)/i
 const NC_PIN = /^(NC|DNC|RESERVED)/i
@@ -281,7 +281,7 @@ export function buildExportPlan(
           mode: assignment.mode,
           x: edaPin.x,
           y: edaPin.y,
-          rotation: edaPin.rotation ?? 0,
+          rotation: portRotation(edaPin.rotation, assignment.mode),
         })
         continue
       }
@@ -319,7 +319,7 @@ export function buildExportPlan(
       mode: assignment.mode,
       x: edaPin.x,
       y: edaPin.y,
-      rotation: edaPin.rotation ?? 0,
+      rotation: portRotation(edaPin.rotation, assignment.mode),
     })
   }
 
@@ -348,4 +348,16 @@ export function buildPinAttributes(pin: PinAssignment): Record<string, string> {
   if (pin.params.pull && pin.params.pull !== 'NONE') attrs[`${base}_PULL`] = pin.params.pull
   if (pin.params.exti?.enabled) attrs[`${base}_EXTI`] = pin.params.exti.edge
   return attrs
+}
+
+/**
+ * NetPort-OUT 符号内部自带 180° 翻转（实测 OUT@0°→引脚 180°、IN@0°→引脚 0°），
+ * 放置 OUT 端口时需要补 180° 才能与 MCU 引脚同向（标签朝外）。
+ */
+export function portRotation(
+  pinRotation: number | undefined,
+  mode: PinMode | undefined,
+): number {
+  const base = (pinRotation ?? 0) % 360
+  return (base + (mode === 'OUTPUT' ? 180 : 0)) % 360
 }

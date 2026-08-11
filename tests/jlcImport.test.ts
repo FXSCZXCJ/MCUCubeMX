@@ -8,6 +8,7 @@ import {
   classifyEdaPin,
   matchDeviceIdBySymbol,
   normalizeEdaPinName,
+  portRotation,
   prioritizeSelectedCandidates,
   resolveModelName,
   stripEdaPinSuffix,
@@ -211,6 +212,17 @@ describe('引脚配置属性构建', () => {
   })
 })
 
+describe('端口摆放旋转角', () => {
+  it('输入端口与引脚同向，输出端口补 180°（符号内部翻转）', () => {
+    expect(portRotation(180, 'INPUT')).toBe(180)
+    expect(portRotation(180, 'OUTPUT')).toBe(0)
+    expect(portRotation(0, 'INPUT')).toBe(0)
+    expect(portRotation(0, 'OUTPUT')).toBe(180)
+    expect(portRotation(undefined, 'INPUT')).toBe(0)
+    expect(portRotation(undefined, 'OUTPUT')).toBe(180)
+  })
+})
+
 describe('导入变更对比', () => {
   const current: Record<string, PinAssignment> = {
     PA0: { pin: 'PA0', label: 'LED', mode: 'OUTPUT', params: {} },
@@ -334,7 +346,7 @@ describe('导出到 EDA 计划构建', () => {
       oldNet: 'OLD',
       newNet: 'LED_R',
       mode: 'OUTPUT',
-      rotation: 0,
+      rotation: 180,
     })
   })
 
