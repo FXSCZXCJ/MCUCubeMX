@@ -209,14 +209,42 @@ for (const c of portComps || []) {
   let dir = null;
   const dirMatch = /^netport-([a-z0-9]+)/i.exec(symbolName);
   if (dirMatch) dir = dirMatch[1].toUpperCase();
-  let portPins = [];
-  try { portPins = (await eda.sch_PrimitiveComponent.getAllPinsByPrimitiveId(c.primitiveId)) || []; } catch { continue; }
-  for (const p of portPins) {
-    let px = 0;
-    let py = 0;
-    try { px = await p.getState_X(); } catch {}
-    try { py = await p.getState_Y(); } catch {}
-    portList.push({ id: c.primitiveId, x: px, y: py, net: other['Global Net Name'] || other['Net'] || '', dir });
+  // 端口/电源符号的元件位置就是连接点（实测 NetPort 的引脚尖=元件位置），
+  // 不依赖 getAllPinsByPrimitiveId，避免该接口偶发失败导致端口被漏检
+  let cx = null;
+  let cy = null;
+  try { cx = await c.getState_X(); } catch {}
+  try { cy = await c.getState_Y(); } catch {}
+  if (typeof cx === 'number' && typeof cy === 'number') {
+    portList.push({ id: c.primitiveId, x: cx, y: cy, net: other['Global Net Name'] || other['Net'] || '', dir });
+  }
+}
+// 导线连通图：端口放在线段末端而非引脚尖时，也能通过同一线段网识别为已连接
+const idByKey = new Map();
+const parent = [];
+function addPt(px, py) {
+  const k = px.toFixed(3) + ',' + py.toFixed(3);
+  if (idByKey.has(k)) return idByKey.get(k);
+  const id = parent.length;
+  idByKey.set(k, id);
+  parent.push(id);
+  return id;
+}
+function findPt(a) {
+  while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; }
+  return a;
+}
+function unionPt(a, b) {
+  const ra = findPt(a);
+  const rb = findPt(b);
+  if (ra !== rb) parent[ra] = rb;
+}
+for (const w of wireList) {
+  for (const pt of w.pts) addPt(pt[0], pt[1]);
+}
+for (const w of wireList) {
+  for (let i = 0; i < w.pts.length - 1; i++) {
+    unionPt(addPt(w.pts[i][0], w.pts[i][1]), addPt(w.pts[i + 1][0], w.pts[i + 1][1]));
   }
 }
 const result = [];
@@ -231,8 +259,11 @@ for (const p of pins || []) {
   let portId = null;
   let portNet = null;
   let portDir = null;
+  const pinWireId = addPt(x, y);
   for (const pt of portList) {
-    if (Math.abs(pt.x - x) < 1e-6 && Math.abs(pt.y - y) < 1e-6) {
+    const sameSpot = Math.abs(pt.x - x) < 0.5 && Math.abs(pt.y - y) < 0.5;
+    const wired = findPt(addPt(pt.x, pt.y)) === findPt(pinWireId);
+    if (sameSpot || wired) {
       conn = 'port';
       portId = pt.id;
       portNet = pt.net || null;
@@ -244,7 +275,7 @@ for (const p of pins || []) {
   if (conn === 'none') {
     for (const w of wireList) {
       for (const pt of w.pts) {
-        if (Math.abs(pt[0] - x) < 1e-6 && Math.abs(pt[1] - y) < 1e-6) {
+        if (Math.abs(pt[0] - x) < 0.5 && Math.abs(pt[1] - y) < 0.5) {
           nets.add(w.net);
           break;
         }
