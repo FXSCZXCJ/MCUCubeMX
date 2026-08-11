@@ -5,6 +5,7 @@ import type {
   EdaWindow,
   McuPinMap,
 } from './types'
+import { resolveModelName } from './import'
 
 export const BRIDGE_PORT_START = 49620
 export const BRIDGE_PORT_END = 49629
@@ -111,6 +112,8 @@ for (const c of comps || []) {
   let name = '';
   let symbolName = '';
   let symbolUuid = '';
+  let componentName = '';
+  let otherProperty = {};
   try { designator = (await c.getState_Designator()) || ''; } catch {}
   try { name = (await c.getState_Name()) || ''; } catch {}
   try {
@@ -118,12 +121,17 @@ for (const c of comps || []) {
     symbolName = (s && s.name) || '';
     symbolUuid = (s && s.uuid) || '';
   } catch {}
-  out.push({ primitiveId: c.primitiveId, designator, name, symbolName, symbolUuid });
+  try {
+    const comp = await c.getState_Component();
+    componentName = (comp && comp.name) || '';
+  } catch {}
+  try { otherProperty = (await c.getState_OtherProperty()) || {}; } catch {}
+  out.push({ primitiveId: c.primitiveId, designator, name, symbolName, symbolUuid, componentName, otherProperty });
 }
 return out;`
   const comps = await execute<EdaComponentInfo[]>(port, code)
   return (comps ?? []).filter(
-    (c) => /U\d+/i.test(c.designator) && MCU_SYMBOL_RE.test(`${c.symbolName} ${c.name}`),
+    (c) => /U\d+/i.test(c.designator) && MCU_SYMBOL_RE.test(resolveModelName(c)),
   )
 }
 
@@ -148,8 +156,12 @@ export async function fetchMcuPinMap(
 const comp = await eda.sch_PrimitiveComponent.get('${primitiveId}');
 let designator = '';
 let symbolName = '';
+let nameAttr = '';
+let componentName = '';
 try { designator = (await comp.getState_Designator()) || ''; } catch {}
 try { const s = await comp.getState_Symbol(); symbolName = (s && s.name) || ''; } catch {}
+try { nameAttr = (await comp.getState_Name()) || ''; } catch {}
+try { const c = await comp.getState_Component(); componentName = (c && c.name) || ''; } catch {}
 const pins = await eda.sch_PrimitiveComponent.getAllPinsByPrimitiveId('${primitiveId}');
 const wires = await eda.sch_PrimitiveWire.getAll();
 const wireList = [];
@@ -178,6 +190,18 @@ for (const p of pins || []) {
   }
   result.push({ number: num, name, x, y, net: nets.size ? [...nets].join('|') : null });
 }
-return { componentId: '${primitiveId}', designator, symbolName, pins: result };`
-  return execute<McuPinMap>(port, code, windowId)
+return { componentId: '${primitiveId}', designator, symbolName, name: nameAttr, componentName, pins: result };`
+  const map = await execute<Omit<McuPinMap, 'modelName'> & { name: string; componentName: string }>(
+    port,
+    code,
+    windowId,
+  )
+  return {
+    ...map,
+    modelName: resolveModelName({
+      name: map.name,
+      symbolName: map.symbolName,
+      componentName: map.componentName,
+    }),
+  }
 }

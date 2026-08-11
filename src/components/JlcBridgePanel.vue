@@ -18,6 +18,7 @@ import {
   matchDeviceIdBySymbol,
   normalizeEdaPinName,
   prioritizeSelectedCandidates,
+  resolveModelName,
 } from '../lib/jlc/import'
 import type {
   BridgeHealth,
@@ -52,7 +53,14 @@ const loadingPins = ref(false)
 
 const connected = computed(() => port.value !== null && health.value?.edaConnected === true)
 const supportedDeviceId = computed(() =>
-  pinMap.value ? matchDeviceIdBySymbol(pinMap.value.symbolName, deviceIds) : null,
+  pinMap.value ? matchDeviceIdBySymbol(pinMap.value.modelName || pinMap.value.symbolName, deviceIds) : null,
+)
+const symbolMismatch = computed(
+  () =>
+    !!pinMap.value &&
+    !!pinMap.value.modelName &&
+    !!pinMap.value.symbolName &&
+    pinMap.value.modelName !== pinMap.value.symbolName,
 )
 
 const statusType = computed(() => {
@@ -176,7 +184,7 @@ async function loadMcus() {
     }
     selectedIds.value = selected
     const { list, preferred } = prioritizeSelectedCandidates(all, selected)
-    candidates.value = list
+    candidates.value = list.map((c) => ({ ...c, modelName: resolveModelName(c) }))
     selectedCandidate.value = preferred
     resetPins()
     if (candidates.value.length === 0) {
@@ -378,7 +386,14 @@ onMounted(() => {
           @current-change="onCandidateChange"
         >
           <el-table-column prop="designator" label="位号" width="80" />
-          <el-table-column prop="symbolName" label="符号 / 型号" />
+          <el-table-column label="型号">
+            <template #default="{ row }">
+              <span>{{ row.modelName || row.symbolName }}</span>
+              <span v-if="row.modelName && row.modelName !== row.symbolName" class="sub">
+                （符号 {{ row.symbolName }}）
+              </span>
+            </template>
+          </el-table-column>
           <el-table-column label="来源" width="110">
             <template #default="{ row }">
               <el-tag
@@ -408,7 +423,8 @@ onMounted(() => {
         <div class="row">
           <span class="info">
             {{ pinMap.designator || pinMap.componentId }} ·
-            {{ pinMap.symbolName }} · {{ pinMap.pins.length }} 脚
+            {{ pinMap.modelName || pinMap.symbolName }} · {{ pinMap.pins.length }} 脚
+            <span v-if="symbolMismatch" class="sub">（符号 {{ pinMap.symbolName }}）</span>
           </span>
           <el-button
             size="small"
@@ -426,6 +442,15 @@ onMounted(() => {
           show-icon
           title="该器件不在 MCUCubeMX 支持列表内"
           :description="`当前支持：${deviceIds.join(' / ')}。仍可预览引脚网络，但无法导入。`"
+          style="margin: 8px 0"
+        />
+        <el-alert
+          v-else-if="symbolMismatch"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="符号名与器件名不一致，请核对引脚定义"
+          :description="`器件显示为 ${pinMap?.modelName}，但所附符号名为 ${pinMap?.symbolName}。该符号可能是其它芯片改名而来（本工程 U1 符号疑似由 STM32L100RCT6 改的），导入前请对照数据手册确认 64 脚定义一致。`"
           style="margin: 8px 0"
         />
         <el-alert
@@ -500,6 +525,10 @@ onMounted(() => {
 .match {
   font-size: 12px;
   color: #409eff;
+}
+.sub {
+  font-size: 12px;
+  color: #9ca3af;
 }
 .summary {
   margin-top: 8px;

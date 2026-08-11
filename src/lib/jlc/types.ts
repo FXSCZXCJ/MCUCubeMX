@@ -26,6 +26,9 @@ export interface EdaComponentInfo {
   name: string
   symbolName: string
   symbolUuid: string
+  componentName: string
+  modelName?: string
+  otherProperty?: Record<string, string>
 }
 
 export interface EdaPinInfo {
@@ -40,6 +43,7 @@ export interface McuPinMap {
   componentId: string
   designator: string
   symbolName: string
+  modelName: string
   pins: EdaPinInfo[]
 }
 

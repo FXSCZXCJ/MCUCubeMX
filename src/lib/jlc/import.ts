@@ -1,5 +1,11 @@
 import type { DeviceData } from '../../data/device'
-import type { EdaPinInfo, ImportPlan, ImportPlanItem, ImportSkipItem } from './types'
+import type {
+  EdaComponentInfo,
+  EdaPinInfo,
+  ImportPlan,
+  ImportPlanItem,
+  ImportSkipItem,
+} from './types'
 
 const POWER_PIN = /^(VDD|VSS|VBAT|VDDA|VSSA|VREFP|VREFN|VCAP|VIN|VOUT|AVDD|AVSS)/i
 const NC_PIN = /^(NC|DNC|RESERVED)/i
@@ -44,6 +50,31 @@ export function matchDeviceIdBySymbol(symbolName: string, deviceIds: string[]): 
     if (up.includes(id.toUpperCase())) return id
   }
   return null
+}
+
+/** 去掉器件库条目名的子部件后缀：GD32L233RCT6_1 → GD32L233RCT6 */
+export function stripPartSuffix(name: string): string {
+  return name.replace(/_\d+$/, '')
+}
+
+/**
+ * 解析原理图器件的型号名。
+ * 优先级：Name 属性（跳过 ={...} 模板）→ 器件库条目名 → LCSC 名称 → 符号名。
+ * 符号名经常与器件名不一致（如符号 GD32L223RCT6 实际放置的是 GD32L233RCT6）。
+ */
+export function resolveModelName(c: Pick<
+  EdaComponentInfo,
+  'name' | 'symbolName' | 'componentName' | 'otherProperty'
+>): string {
+  const candidates = [
+    c.name && !c.name.includes('{') ? c.name.trim() : '',
+    stripPartSuffix(c.componentName ?? '').trim(),
+    (c.otherProperty?.['LCSC Part Name'] ?? '').trim(),
+    (c.otherProperty?.['Manufacturer Part'] ?? '').trim(),
+    (c.otherProperty?.['Design Item ID'] ?? '').trim(),
+    c.symbolName.trim(),
+  ]
+  return candidates.find((v) => v.length > 0) ?? ''
 }
 
 /**

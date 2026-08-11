@@ -6,7 +6,9 @@ import {
   matchDeviceIdBySymbol,
   normalizeEdaPinName,
   prioritizeSelectedCandidates,
+  resolveModelName,
   stripEdaPinSuffix,
+  stripPartSuffix,
 } from '../src/lib/jlc/import'
 import type { EdaPinInfo } from '../src/lib/jlc/types'
 
@@ -65,6 +67,43 @@ describe('器件识别', () => {
   it('不支持的器件返回 null', () => {
     expect(matchDeviceIdBySymbol('STM32F103C8T6', deviceIds)).toBeNull()
     expect(matchDeviceIdBySymbol('BME280', deviceIds)).toBeNull()
+  })
+})
+
+describe('器件型号解析', () => {
+  it('优先使用非模板的 Name 属性（符号名 223 不影响）', () => {
+    expect(
+      resolveModelName({
+        name: 'GD32L233RCT6',
+        symbolName: 'GD32L223RCT6',
+        componentName: 'GD32L233RCT6_1',
+      }),
+    ).toBe('GD32L233RCT6')
+  })
+
+  it('模板名回退到器件库条目名并去掉 _N 子部件后缀', () => {
+    expect(
+      resolveModelName({
+        name: '={Manufacturer Part}',
+        symbolName: 'GD32L223RCT6',
+        componentName: 'GD32L233RCT6_1',
+      }),
+    ).toBe('GD32L233RCT6')
+    expect(stripPartSuffix('GD32F427VET6_2')).toBe('GD32F427VET6')
+  })
+
+  it('再回退到 LCSC 名称 / 符号名', () => {
+    expect(
+      resolveModelName({
+        name: '',
+        symbolName: 'X',
+        componentName: '',
+        otherProperty: { 'LCSC Part Name': 'GD32F427VET6' },
+      }),
+    ).toBe('GD32F427VET6')
+    expect(
+      resolveModelName({ name: '', symbolName: 'GD32L223RCT6', componentName: '' }),
+    ).toBe('GD32L223RCT6')
   })
 })
 
