@@ -19,7 +19,8 @@ MCUCubeMX (浏览器) ──HTTP /execute──▶ bridge-server.mjs (:49620-496
    ```
 
    桥会自动占用 `49620-49629` 中的第一个空闲端口，并等待 EDA 扩展握手。
-   开发时也可以用一条命令同时启动 Vite 和桥：
+   **开发模式下 `npm run dev` 会自动拉起本地桥**（Vite 插件），无需手动执行；
+   也可以一条命令同时启动 Vite 和桥：
 
    ```powershell
    npm run dev:all
