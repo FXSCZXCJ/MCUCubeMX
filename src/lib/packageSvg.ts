@@ -2,8 +2,8 @@ import type { DevicePackage, PinDef } from '../types'
 
 export const PAD_W = 14
 export const PAD_LEN = 20
-// 外侧标签留白：容纳最长 8 字符的配置标签（左右侧水平延伸不截断）
-export const LABEL_MARGIN = 48
+// 外侧标签留白：配置标签不再截断，留足左右侧水平延伸空间
+export const LABEL_MARGIN = 64
 // 四角引脚的内侧 GPIO 名沿本边向内偏移量，避免与相邻边角上引脚重叠
 export const CORNER_INNER_SHIFT = 16
 // 相邻引脚名称标签不重叠所需的最小间距（已在 LQFP64/LQFP100 上验证）

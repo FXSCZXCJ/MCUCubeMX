@@ -110,10 +110,6 @@ const LEGEND_LABELS: Record<string, string> = {
 
 const DEBUG_ALIASES = ['SWDIO', 'SWCLK', 'JTDO', 'NJTRST', 'JTDI']
 
-function truncate(s: string): string {
-  return s.length > 8 ? `${s.slice(0, 7)}…` : s
-}
-
 function defaultLabel(pin: PinDef): string {
   if (pin.special === 'swd') {
     const hit = (pin.aliases ?? []).find((a) => DEBUG_ALIASES.includes(a))
@@ -128,8 +124,8 @@ function defaultLabel(pin: PinDef): string {
 function displayLabel(pin: PinDef): string | undefined {
   if (pin.type === 'POWER' || pin.type === 'NC') return undefined
   const assignment = store.assignments[pin.name]
-  if (assignment) return truncate(assignment.label || pin.name)
-  if (pin.special) return truncate(defaultLabel(pin))
+  if (assignment) return assignment.label || pin.name
+  if (pin.special) return defaultLabel(pin)
   return undefined
 }
 </script>

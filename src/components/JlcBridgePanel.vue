@@ -643,27 +643,26 @@ onMounted(() => {
   <el-dialog
     :model-value="modelValue"
     title="嘉立创 EDA Pro 对接"
-    width="880px"
+    width="960px"
     top="6vh"
     @close="close"
   >
     <div class="jlc-panel">
       <section class="section">
-        <div class="section-title">1. 连接本地桥</div>
-        <div class="row" style="margin-bottom: 8px">
-          <el-button size="small" type="primary" :loading="syncing" @click="oneClickSync">
-            一键同步
-          </el-button>
-          <el-checkbox v-model="prefs.autoSync" size="small" @change="savePrefs(prefs)">
-            同步免确认
-          </el-checkbox>
+        <div class="section-title">连接本地桥</div>
+        <div class="row row-toolbar">
           <el-radio-group v-model="prefs.syncMode" size="small" @change="savePrefs(prefs)">
             <el-radio-button value="port">端口模式</el-radio-button>
             <el-radio-button value="wire">线段模式</el-radio-button>
             <el-radio-button value="convert">转化为网络端口</el-radio-button>
             <el-radio-button value="towire">转化为线段</el-radio-button>
           </el-radio-group>
-          <span class="hint">首次手动配置一次，之后自动恢复所选 MCU</span>
+          <el-checkbox v-model="prefs.autoSync" size="small" @change="savePrefs(prefs)">
+            同步免确认
+          </el-checkbox>
+          <el-button size="small" type="primary" :loading="syncing" @click="oneClickSync">
+            一键同步
+          </el-button>
         </div>
         <div class="row">
           <el-tag :type="statusType" size="small">{{ statusText }}</el-tag>
@@ -672,8 +671,7 @@ onMounted(() => {
           </el-button>
           <el-button size="small" :disabled="!port" @click="refreshWindows">刷新窗口</el-button>
           <span class="hint">
-            需先启动本地桥
-            <code>npm run dev:all</code>，并安装 run-api-gateway 扩展
+            <code>npm run dev:all</code>
             <el-button size="small" text type="primary" @click="copyCommand('npm run dev:all')">
               复制命令
             </el-button>
@@ -715,7 +713,7 @@ onMounted(() => {
       </section>
 
       <section v-if="port" class="section">
-        <div class="section-title">2. 工程与 MCU</div>
+        <div class="section-title">工程与 MCU</div>
         <div class="row">
           <el-button
             size="small"
@@ -761,6 +759,15 @@ onMounted(() => {
             扫描原理图 MCU
           </el-button>
           <span v-if="candidates.length" class="info">找到 {{ candidates.length }} 个候选器件</span>
+          <el-button
+            v-if="selectedCandidate"
+            size="small"
+            type="primary"
+            :loading="loadingPins"
+            @click="loadPinMap"
+          >
+            读取 {{ selectedCandidate.designator }} 引脚配置
+          </el-button>
         </div>
         <el-table
           v-if="project"
@@ -791,20 +798,10 @@ onMounted(() => {
             </template>
           </el-table-column>
         </el-table>
-        <div v-if="selectedCandidate" class="row" style="margin-top: 8px">
-          <el-button
-            size="small"
-            type="primary"
-            :loading="loadingPins"
-            @click="loadPinMap"
-          >
-            读取 {{ selectedCandidate.designator }} 引脚配置
-          </el-button>
-        </div>
       </section>
 
       <section v-if="pinMap" class="section">
-        <div class="section-title">3. 引脚预览与导入</div>
+        <div class="section-title">引脚与同步</div>
         <div class="row">
           <span class="info">
             {{ pinMap.designator || pinMap.componentId }} ·
@@ -1033,6 +1030,11 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+.row-toolbar {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f1f3;
+  margin-bottom: 8px;
 }
 .label {
   color: #6b7280;
