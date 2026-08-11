@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
   PIN_COLORS,
+  normalizeRotation,
   outsideLabelDy,
   packageGeometry,
   pinGeometry,
@@ -17,6 +18,7 @@ const viewRef = ref<HTMLElement | null>(null)
 const autoFit = ref(true)
 const manualFactor = ref(1)
 const autoZoom = ref(1)
+const rotation = ref(0)
 
 const MIN_ZOOM = 0.4
 const MAX_ZOOM = 2.5
@@ -38,11 +40,18 @@ function updateAutoZoom() {
   const width = el.clientWidth
   const top = el.getBoundingClientRect().top
   const availHeight = window.innerHeight - top - 12 - CHROME_HEIGHT
-      const size = geo.value.svgSize
-      autoZoom.value = Math.min(
-        MAX_ZOOM,
-        Math.max(MIN_ZOOM, Math.min(width / size, availHeight / size)),
-      )
+  const size = geo.value.svgSize
+  // 旋转后按对角线占用空间（45° 最大为 √2 倍）计算自动适配
+  const rotFactor = rotation.value % 180 === 0 ? 1 : Math.SQRT2
+  autoZoom.value = Math.min(
+    MAX_ZOOM,
+    Math.max(MIN_ZOOM, Math.min(width / (size * rotFactor), availHeight / (size * rotFactor))),
+  )
+}
+
+function rotateBy(delta: number) {
+  rotation.value = normalizeRotation(rotation.value + delta)
+  updateAutoZoom()
 }
 
 onMounted(() => {
@@ -64,6 +73,8 @@ function changeManual(delta: number) {
 function reset() {
   autoFit.value = true
   manualFactor.value = 1
+  rotation.value = 0
+  updateAutoZoom()
 }
 
 function stateOf(pin: PinDef): PinState {
@@ -140,12 +151,19 @@ function displayLabel(pin: PinDef): string | undefined {
         <el-button size="small" title="重置：自动适配 100%" @click="reset">重置</el-button>
         <el-button size="small" title="放大" @click="changeManual(0.25)">＋</el-button>
       </el-button-group>
+      <span class="zoom-label">旋转 {{ rotation }}°</span>
+      <el-button-group>
+        <el-button size="small" title="逆时针旋转 45°" @click="rotateBy(-45)">⟲45°</el-button>
+        <el-button size="small" title="复位旋转" @click="rotateBy(360 - rotation)">复位</el-button>
+        <el-button size="small" title="顺时针旋转 45°" @click="rotateBy(45)">⟳45°</el-button>
+      </el-button-group>
     </div>
     <div class="package-stage">
       <svg
         :width="geo.svgSize * effectiveZoom"
         :height="geo.svgSize * effectiveZoom"
         :viewBox="`0 0 ${geo.svgSize} ${geo.svgSize}`"
+        :style="{ transform: `rotate(${rotation}deg)` }"
         class="package-svg"
       >
         <!-- 芯片本体 -->
@@ -269,6 +287,8 @@ function displayLabel(pin: PinDef): string | undefined {
 }
 .package-svg {
   flex: none;
+  transform-origin: center center;
+  transition: transform 0.2s ease;
 }
 .pin.selectable {
   cursor: pointer;

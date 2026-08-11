@@ -6,6 +6,11 @@ export const PAD_LEN = 20
 export const LABEL_MARGIN = 64
 // 四角引脚的内侧 GPIO 名沿本边向内偏移量，避免与相邻边角上引脚重叠
 export const CORNER_INNER_SHIFT = 16
+
+/** 角度归一化到 [0, 360) */
+export function normalizeRotation(deg: number): number {
+  return ((deg % 360) + 360) % 360
+}
 // 相邻引脚名称标签不重叠所需的最小间距（已在 LQFP64/LQFP100 上验证）
 export const PITCH = 28.8
 

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { devices } from '../src/data/device'
-import { outsideLabelDy, packageGeometry, pinGeometry } from '../src/lib/packageSvg'
+import {
+  normalizeRotation,
+  outsideLabelDy,
+  packageGeometry,
+  pinGeometry,
+} from '../src/lib/packageSvg'
 import type { PinDef } from '../src/types'
 
 const pin = (number: number, side: PinDef['side']): PinDef => ({
@@ -24,6 +29,17 @@ describe('封装图外侧标签交错', () => {
   it('左右侧不交错', () => {
     expect(outsideLabelDy(pin(17, 'right'), 16)).toBe(0)
     expect(outsideLabelDy(pin(49, 'left'), 16)).toBe(0)
+  })
+})
+
+describe('旋转角度归一化', () => {
+  it('45° 步进与负角/超 360° 归一化', () => {
+    expect(normalizeRotation(0)).toBe(0)
+    expect(normalizeRotation(45)).toBe(45)
+    expect(normalizeRotation(-45)).toBe(315)
+    expect(normalizeRotation(405)).toBe(45)
+    expect(normalizeRotation(-405)).toBe(315)
+    expect(normalizeRotation(360)).toBe(0)
   })
 })
 
