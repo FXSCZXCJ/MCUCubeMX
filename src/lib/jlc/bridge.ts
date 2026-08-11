@@ -353,7 +353,7 @@ export async function applySyncActions(
   windowId?: string,
 ): Promise<SyncResult> {
   if (actions.length === 0) {
-    return { updated: 0, replaced: 0, converted: 0, renamed: 0, placed: 0, failed: [] }
+    return { updated: 0, replaced: 0, converted: 0, renamed: 0, placed: 0, toWire: 0, failed: [] }
   }
   const code = `
 const actions = ${JSON.stringify(actions)};
@@ -362,6 +362,7 @@ let replaced = 0;
 let converted = 0;
 let renamed = 0;
 let placed = 0;
+let toWire = 0;
 const failures = [];
 for (const a of actions.filter((x) => x.action === 'update-port')) {
   try {
@@ -414,6 +415,21 @@ for (const a of actions.filter((x) => x.action === 'wire-to-port')) {
     failures.push('线段转端口 ' + a.net + ': ' + (err && err.message));
   }
 }
+for (const a of actions.filter((x) => x.action === 'port-to-wire' || x.action === 'add-wire')) {
+  try {
+    if (a.action === 'port-to-wire' && a.portId) {
+      await eda.sch_PrimitiveComponent.delete(a.portId);
+    }
+    // 从引脚连接点向外延伸 10 单位的小线段（方向按引脚旋转角）
+    const rad = (a.rotation || 0) * Math.PI / 180;
+    const ex = a.x + 10 * Math.cos(rad);
+    const ey = a.y - 10 * Math.sin(rad);
+    await eda.sch_PrimitiveWire.create([a.x, a.y, ex, ey], a.net);
+    toWire++;
+  } catch (err) {
+    failures.push('转线段 ' + a.net + ': ' + (err && err.message));
+  }
+}
 const wires = await eda.sch_PrimitiveWire.getAll();
 const byNet = {};
 for (const w of wires || []) {
@@ -441,7 +457,7 @@ for (const a of actions.filter((x) => x.action === 'place-port')) {
     failures.push('新增端口 ' + a.net + ': ' + (err && err.message));
   }
 }
-return { updated, replaced, converted, renamed, placed, failed: failures };`
+return { updated, replaced, converted, renamed, placed, toWire, failed: failures };`
   return execute<SyncResult>(port, code, windowId)
 }
 

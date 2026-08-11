@@ -102,8 +102,15 @@ export interface ExportChangeItem {
   newNet: string
   status: ExportChangeStatus
   skipReason?: string
-  /** 同步动作：更新端口 / 更换端口 / 删线段放端口 / 改线段网络 / 新增端口 */
-  action?: 'update-port' | 'replace-port' | 'wire-to-port' | 'rename-wire' | 'place-port'
+  /** 同步动作：更新端口 / 更换端口 / 删线段放端口 / 改线段网络 / 新增端口 / 端口转线段 / 新增线段 */
+  action?:
+    | 'update-port'
+    | 'replace-port'
+    | 'wire-to-port'
+    | 'rename-wire'
+    | 'place-port'
+    | 'port-to-wire'
+    | 'add-wire'
   /** 命中网络端口的图元 ID（action=update-port 时） */
   portId?: string | null
   /** 输入/输出方向，决定放置 IN / OUT 网络端口 */
@@ -116,7 +123,14 @@ export interface ExportChangeItem {
 }
 
 export interface SyncAction {
-  action: 'update-port' | 'replace-port' | 'wire-to-port' | 'rename-wire' | 'place-port'
+  action:
+    | 'update-port'
+    | 'replace-port'
+    | 'wire-to-port'
+    | 'rename-wire'
+    | 'place-port'
+    | 'port-to-wire'
+    | 'add-wire'
   net: string
   x: number
   y: number
@@ -132,6 +146,7 @@ export interface SyncResult {
   converted: number
   renamed: number
   placed: number
+  toWire: number
   failed: string[]
 }
 

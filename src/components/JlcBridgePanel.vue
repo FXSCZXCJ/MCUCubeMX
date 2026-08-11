@@ -110,6 +110,9 @@ const syncModeDesc = computed(() => {
   if (prefs.value.syncMode === 'convert') {
     return '转化为网络端口：删除已有线段并在引脚放置 IN/OUT 端口'
   }
+  if (prefs.value.syncMode === 'towire') {
+    return '转化为线段：端口→删端口放线段；未连线→放线段；已有线段→改网络名'
+  }
   return '端口模式：新增/更新/更换端口（不删除已有线段）'
 })
 
@@ -546,7 +549,7 @@ async function confirmExport() {
         []
       ) as string[]
       parts.push(
-        `更新端口 ${result.updated}、更换端口 ${result.replaced}、线段转端口 ${result.converted}、新增端口 ${result.placed}`,
+        `更新端口 ${result.updated}、更换端口 ${result.replaced}、线段转端口 ${result.converted}、新增端口 ${result.placed}、转线段 ${result.toWire}`,
       )
       if (failed.length) parts.push(`失败 ${failed.length}`)
       if (failed.length) {
@@ -600,6 +603,8 @@ const actionLabels: Record<string, string> = {
   'wire-to-port': '删线段+放端口',
   'rename-wire': '改线段网络',
   'place-port': '新增端口',
+  'port-to-wire': '端口转线段',
+  'add-wire': '新增线段',
 }
 
 function actionText(action: string | undefined): string {
@@ -633,6 +638,7 @@ onMounted(() => {
             <el-radio-button value="port">端口模式</el-radio-button>
             <el-radio-button value="wire">线段模式</el-radio-button>
             <el-radio-button value="convert">转化为网络端口</el-radio-button>
+            <el-radio-button value="towire">转化为线段</el-radio-button>
           </el-radio-group>
           <span class="hint">首次手动配置一次，之后自动恢复所选 MCU</span>
         </div>
@@ -917,7 +923,9 @@ onMounted(() => {
                   ? 'danger'
                   : row.action === 'update-port'
                     ? 'warning'
-                    : row.action === 'wire-to-port'
+                    : row.action === 'wire-to-port' ||
+                        row.action === 'rename-wire' ||
+                        row.action === 'port-to-wire'
                       ? 'primary'
                       : 'success'
               "

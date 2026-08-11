@@ -252,6 +252,27 @@ describe('同步模式选择', () => {
       ['PA5', 'place-port'],
     ])
   })
+
+  it('转化为线段：端口→删端口放线段，未连线→放线段，线段→改网络名', () => {
+    const portPlan = buildExportPlan(
+      gd32,
+      [{ pin: 'PA6', label: 'NEW', mode: 'INPUT', params: {} }],
+      [{ number: '6', name: 'PA6', x: 10, y: 20, net: 'OLD', conn: 'port', portId: 'p1', portNet: 'OLD', portDir: 'IN' }],
+      'towire',
+    )
+    expect(portPlan.changes[0]).toMatchObject({
+      action: 'port-to-wire',
+      portId: 'p1',
+      oldNet: 'OLD',
+      newNet: 'NEW',
+    })
+
+    const wirePlan = buildExportPlan(gd32, assignments, pinMap, 'towire')
+    expect(wirePlan.changes.map((c) => [c.pin, c.action])).toEqual([
+      ['PA1', 'rename-wire'],
+      ['PA5', 'add-wire'],
+    ])
+  })
 })
 
 describe('导入变更对比', () => {

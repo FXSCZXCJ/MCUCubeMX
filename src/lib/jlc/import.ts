@@ -195,7 +195,7 @@ export function buildExportPlan(
   device: DeviceData,
   assignments: PinAssignment[],
   pinMap: EdaPinInfo[],
-  mode: 'port' | 'wire' | 'convert' = 'port',
+  mode: 'port' | 'wire' | 'convert' | 'towire' = 'port',
 ): ExportPlan {
   const byCanonical = new Map<string, EdaPinInfo>()
   for (const p of pinMap) {
@@ -255,6 +255,33 @@ export function buildExportPlan(
     const conn = edaPin.conn ?? (oldNet ? 'wire' : 'none')
 
     if (conn === 'port') {
+      if (mode === 'towire') {
+        // 转化为线段：端口网络名与标签一致则保持，否则删端口放线段
+        if (edaPin.portNet === assignment.label) {
+          items.push({
+            pin: assignment.pin,
+            edaName: edaPin.name,
+            oldNet: edaPin.portNet ?? null,
+            newNet: assignment.label,
+            status: 'keep',
+          })
+          continue
+        }
+        items.push({
+          pin: assignment.pin,
+          edaName: edaPin.name,
+          oldNet: edaPin.portNet ?? null,
+          newNet: assignment.label,
+          status: 'change',
+          action: 'port-to-wire',
+          portId: edaPin.portId,
+          mode: assignment.mode,
+          x: edaPin.x,
+          y: edaPin.y,
+          rotation: edaPin.rotation ?? 0,
+        })
+        continue
+      }
       const requiredDir = assignment.mode === 'OUTPUT' ? 'OUT' : 'IN'
       const isNetPort = !!edaPin.portDir
       const sameNet = edaPin.portNet === assignment.label
@@ -310,7 +337,7 @@ export function buildExportPlan(
       continue
     }
     if (conn === 'none') {
-      // 线段模式：未连线没有线段可改，跳过；端口/转化模式：直接放置端口
+      // 线段模式：未连线没有线段可改，跳过；端口/转化端口：放端口；转化为线段：放线段
       if (mode === 'wire') {
         items.push({
           pin: assignment.pin,
@@ -328,11 +355,11 @@ export function buildExportPlan(
         oldNet: null,
         newNet: assignment.label,
         status: 'change',
-        action: 'place-port',
+        action: mode === 'towire' ? 'add-wire' : 'place-port',
         mode: assignment.mode,
         x: edaPin.x,
         y: edaPin.y,
-        rotation: portRotation(edaPin.rotation, assignment.mode),
+        rotation: mode === 'towire' ? (edaPin.rotation ?? 0) : portRotation(edaPin.rotation, assignment.mode),
       })
       continue
     }
@@ -350,6 +377,7 @@ export function buildExportPlan(
       })
       continue
     }
+    // conn === 'wire'
     const action = mode === 'convert' ? 'wire-to-port' : 'rename-wire'
     items.push({
       pin: assignment.pin,
