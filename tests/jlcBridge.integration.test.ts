@@ -24,6 +24,7 @@ describe('嘉立创桥集成测试', () => {
     const project = await fetchProjectInfo(live!.port)
     expect(project).toBeTruthy()
     expect(project!.name).toBeTruthy()
+    expect(Array.isArray(project!.boards)).toBe(true)
   })
 
   it.runIf(run)('扫描 MCU 并读取引脚→网络映射', async () => {

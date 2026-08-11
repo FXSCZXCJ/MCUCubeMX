@@ -17,6 +17,8 @@ export interface EdaWindow {
 export interface EdaProjectInfo {
   uuid?: string
   name?: string
+  /** 当前打开的板（PCB/原理图所属板） */
+  currentBoard?: string
   boards?: { name: string; schematicName?: string }[]
 }
 

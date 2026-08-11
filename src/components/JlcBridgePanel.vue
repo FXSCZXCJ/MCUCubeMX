@@ -96,6 +96,10 @@ const statusText = computed(() => {
   return '未连接'
 })
 
+const otherBoards = computed(() =>
+  (project.value?.boards ?? []).filter((b) => b.name !== project.value?.currentBoard),
+)
+
 const kindLabels: Record<ImportChangeKind, string> = {
   add: '新增',
   change: '修改',
@@ -546,13 +550,21 @@ onMounted(() => {
           >
             读取当前工程
           </el-button>
-          <span v-if="project" class="info">
-            工程：{{ project.name }}
-            <template v-if="project.boards?.length">
-              （{{ project.boards.map((b) => b.name).join(' / ') }}）
-            </template>
-          </span>
+          <template v-if="project">
+            <span class="info">工程：{{ project.name }}</span>
+            <el-tag v-if="project.currentBoard" size="small" type="success">
+              当前板：{{ project.currentBoard }}
+            </el-tag>
+          </template>
         </div>
+        <el-collapse v-if="project && otherBoards.length" class="boards-collapse">
+          <el-collapse-item :title="`其他板（${otherBoards.length}）`" name="other">
+            <div v-for="b in otherBoards" :key="b.name" class="board-item">
+              {{ b.name }}
+              <span v-if="b.schematicName" class="sub">· {{ b.schematicName }}</span>
+            </div>
+          </el-collapse-item>
+        </el-collapse>
         <div v-if="project" class="row" style="margin-top: 8px">
           <el-button size="small" :loading="loadingMcus" @click="loadMcus">
             扫描原理图 MCU
@@ -844,5 +856,15 @@ onMounted(() => {
   margin-top: 8px;
   font-size: 12px;
   color: #6b7280;
+}
+.boards-collapse {
+  margin-top: 8px;
+  border: 1px solid #f0f1f3;
+  border-radius: 6px;
+}
+.board-item {
+  font-size: 12px;
+  padding: 3px 6px;
+  color: #374151;
 }
 </style>

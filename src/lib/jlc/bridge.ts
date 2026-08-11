@@ -94,9 +94,15 @@ export async function fetchProjectInfo(port: number): Promise<EdaProjectInfo | n
   const code = `
 const project = await eda.dmt_Project.getCurrentProjectInfo();
 if (!project) return null;
+let currentBoard = '';
+try {
+  const b = await eda.dmt_Board.getCurrentBoardInfo();
+  currentBoard = (b && b.name) || '';
+} catch {}
 return {
   uuid: project.uuid,
   name: project.friendlyName || project.name,
+  currentBoard,
   boards: (project.data || []).map((b) => ({
     name: b.name,
     schematicName: b.schematic && b.schematic.name,
