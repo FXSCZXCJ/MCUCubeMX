@@ -6,6 +6,7 @@ import PinTable from './components/PinTable.vue'
 import PinConfigPanel from './components/PinConfigPanel.vue'
 import ConflictsPanel from './components/ConflictsPanel.vue'
 import CodegenDialog from './components/CodegenDialog.vue'
+import JlcBridgePanel from './components/JlcBridgePanel.vue'
 import { useProjectStore } from './stores/project'
 import { downloadBlob } from './lib/codegen'
 import { deviceIds } from './data/device'
@@ -13,6 +14,7 @@ import type { ProjectConfig } from './types'
 
 const store = useProjectStore()
 const codegenVisible = ref(false)
+const jlcVisible = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 function onImportClick() {
@@ -93,6 +95,7 @@ async function clearAll() {
         <el-button size="small" @click="onImportClick">导入配置</el-button>
         <el-button size="small" @click="exportConfig">导出配置</el-button>
         <el-button size="small" @click="clearAll">清空</el-button>
+        <el-button size="small" type="primary" plain @click="jlcVisible = true">嘉立创</el-button>
         <el-button
           size="small"
           type="primary"
@@ -129,6 +132,7 @@ async function clearAll() {
     </main>
 
     <CodegenDialog v-model="codegenVisible" />
+    <JlcBridgePanel v-model="jlcVisible" />
   </div>
 </template>
 

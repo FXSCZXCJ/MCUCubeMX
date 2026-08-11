@@ -12,7 +12,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "validate:device": "node scripts/validate-device-data.mjs",
-    "verify:build": "node scripts/verify-build.mjs"
+    "verify:build": "node scripts/verify-build.mjs",
+    "jlc:bridge": "node scripts/jlc/bridge-server.mjs"
   },
   "dependencies": {
     "ejs": "^3.1.10",
@@ -33,6 +34,7 @@
     "typescript": "~5.6.3",
     "vite": "^6.0.7",
     "vitest": "^3.0.2",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^2.2.0",
+    "ws": "^8.18.0"
   }
 }

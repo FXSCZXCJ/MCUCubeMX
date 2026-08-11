@@ -106,5 +106,17 @@ export const useProjectStore = defineStore('project', {
       }
       this.prefix = config.naming?.prefix || 'MX_'
     },
+    /** 应用嘉立创导入结果：必要时切换器件并整体替换引脚配置 */
+    applyImport(deviceId: string, assignments: PinAssignment[]) {
+      if (deviceId !== this.deviceId && getDeviceData(deviceId)) {
+        this.deviceId = deviceId
+      }
+      const next: Record<string, PinAssignment> = {}
+      for (const assignment of assignments) {
+        next[assignment.pin] = assignment
+      }
+      this.assignments = next
+      this.selectedPin = null
+    },
   },
 })
