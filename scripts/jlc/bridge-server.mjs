@@ -132,6 +132,23 @@ async function findAvailablePort() {
 }
 
 // ─── HTTP Server (for AI to submit code via HTTP POST) ─────────────
+/**
+ * 安全响应：客户端已断开或响应头已发送时忽略，避免
+ * ERR_HTTP_HEADERS_SENT 导致整个桥进程崩溃。
+ */
+function sendJson(res, status, payload) {
+  if (res.headersSent || res.writableEnded) {
+    return;
+  }
+  try {
+    res.writeHead(status, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(payload));
+  }
+  catch (err) {
+    console.error('[HTTP] sendJson failed:', err.message);
+  }
+}
+
 const httpServer = createServer(async (req, res) => {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -146,8 +163,7 @@ const httpServer = createServer(async (req, res) => {
 
   // Health check — includes service identifier for client handshake verification
   if (req.method === 'GET' && req.url === '/health') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
+    sendJson(res, 200, {
       service: SERVICE_ID,
       status: 'ok',
       edaConnected: edaClients.size > 0,
@@ -155,13 +171,12 @@ const httpServer = createServer(async (req, res) => {
       activeWindowId: activeEdaWindowId,
       pendingRequests: pendingRequests.size,
       timestamp: Date.now(),
-    }));
+    });
     return;
   }
 
   // List all connected EDA windows
   if (req.method === 'GET' && req.url === '/eda-windows') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
     const windows = [];
     for (const [windowId, ws] of edaClients) {
       windows.push({
@@ -170,33 +185,31 @@ const httpServer = createServer(async (req, res) => {
         active: windowId === activeEdaWindowId,
       });
     }
-    res.end(JSON.stringify({
+    sendJson(res, 200, {
       windows,
       activeWindowId: activeEdaWindowId,
       count: edaClients.size,
-    }));
+    });
     return;
   }
 
   // Set active EDA window
   if (req.method === 'POST' && req.url === '/eda-windows/select') {
     let body = '';
-    for await (const chunk of req) body += chunk;
     try {
+      for await (const chunk of req) body += chunk;
       const payload = JSON.parse(body);
       const { windowId } = payload;
       if (!edaClients.has(windowId)) {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: `EDA window "${windowId}" not found` }));
+        sendJson(res, 404, { error: `EDA window "${windowId}" not found` });
         return;
       }
       activeEdaWindowId = windowId;
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, activeWindowId }));
+      sendJson(res, 200, { success: true, activeWindowId });
     }
-    catch {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Invalid request body' }));
+    catch (err) {
+      console.error('[HTTP] /eda-windows/select failed:', err.message);
+      sendJson(res, 400, { error: 'Invalid request body' });
     }
     return;
   }
@@ -204,31 +217,36 @@ const httpServer = createServer(async (req, res) => {
   // Execute code on EDA
   if (req.method === 'POST' && req.url === '/execute') {
     let body = '';
-    for await (const chunk of req) body += chunk;
-
     try {
+      for await (const chunk of req) body += chunk;
       const payload = JSON.parse(body);
       const code = payload.code;
       const windowId = payload.windowId; // optional, uses active window if not specified
       if (!code || typeof code !== 'string') {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Missing "code" field (string)' }));
+        sendJson(res, 400, { error: 'Missing "code" field (string)' });
         return;
       }
 
       const result = await executeOnEda(code, windowId);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, result, windowId: windowId || activeEdaWindowId }));
+      sendJson(res, 200, { success: true, result, windowId: windowId || activeEdaWindowId });
     } catch (err) {
-      const status = err.message?.includes('not connected') ? 503 : 500;
-      res.writeHead(status, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: false, error: err.message }));
+      const status = /not connected|no eda window/i.test(err.message ?? '') ? 503 : 500;
+      console.error('[HTTP] /execute failed:', err.message);
+      sendJson(res, status, { success: false, error: err.message });
     }
     return;
   }
 
-  res.writeHead(404, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: 'Not found' }));
+  sendJson(res, 404, { error: 'Not found' });
+});
+
+// 本地开发桥：单个请求/连接异常不应让整个进程退出，
+// 打印日志后继续服务（仅限 localhost 开发场景）。
+process.on('uncaughtException', (err) => {
+  console.error('[Bridge] uncaughtException:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Bridge] unhandledRejection:', reason);
 });
 
 // ─── WebSocket Server ───────────────────────────────────────────────
