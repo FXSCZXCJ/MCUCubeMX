@@ -177,6 +177,10 @@ function displayLabel(pin: PinDef): string | undefined {
           stroke="#374151"
           stroke-width="2"
         />
+        <!-- Pin 1 方向标记：左上角凹陷圆点 -->
+        <circle :cx="geo.margin + 10" :cy="geo.margin + 10" r="4.5" fill="#374151">
+          <title>Pin 1 方向标记</title>
+        </circle>
         <text
           :x="geo.svgSize / 2"
           :y="geo.svgSize / 2 - 8"
