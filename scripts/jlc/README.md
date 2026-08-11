@@ -47,6 +47,7 @@ MCUCubeMX (浏览器) ──HTTP /execute──▶ bridge-server.mjs (:49620-496
   - **线段**连接（导线）→ 改线段网络（同网络全部导线 NET 属性）；
   - **未连接** → 新增网络端口（输入端 IN、输出端 OUT，网络名=标签），端口按 MCU 引脚方向摆放（旋转角与引脚一致）；
   - 无标签、特殊引脚、EDA 中找不到的引脚自动跳过。
+- 同步时还会把引脚配置**写入 MCU 元件本身**（`otherProperty`，属性形如 `PA5_MODE` / `PA5_LABEL` / `PA5_PULL` / `PA5_EXTI` / `PA5_OTYPE` / `PA5_SPEED` / `PA5_LEVEL`），在 EDA 属性面板可见；网络端口/线段只表达网络名，不塞引脚配置。已配置消失的旧 `PAx_*` 属性会自动清理。
 
 ## ⚠️ 同步到 EDA 警告
 

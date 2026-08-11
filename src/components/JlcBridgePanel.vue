@@ -12,11 +12,13 @@ import {
   getEdaWindows,
   scanBridge,
   selectEdaWindow,
+  writeMcuAttributes,
 } from '../lib/jlc/bridge'
 import {
   buildExportPlan,
   buildImportDiff,
   buildImportPlan,
+  buildPinAttributes,
   classifyEdaPin,
   matchDeviceIdBySymbol,
   normalizeEdaPinName,
@@ -37,6 +39,7 @@ import type {
   ImportPlan,
   McuPinMap,
   SyncAction,
+  SyncResult,
 } from '../lib/jlc/types'
 import type { PinAssignment } from '../types'
 
@@ -444,34 +447,62 @@ function prepareExport() {
 async function confirmExport() {
   if (!port.value || !exportPreview.value) return
   const changes = exportPreview.value.changes
-  if (changes.length === 0) {
-    ElMessage.info('没有需要同步的网络变更')
-    exportPreview.value = null
-    return
-  }
   exporting.value = true
   try {
-    const syncActions: SyncAction[] = changes.map((c) => ({
-      action: c.action ?? 'place-port',
-      net: c.newNet,
-      x: c.x ?? 0,
-      y: c.y ?? 0,
-      direction: c.mode === 'OUTPUT' ? 'OUT' : 'IN',
-      rotation: c.rotation ?? 0,
-      portId: c.portId,
-      oldNet: c.oldNet,
-    }))
-    const result = await withFreshWindow(() =>
-      applySyncActions(
-        port.value!,
-        syncActions,
-        selectedWindowId.value || undefined,
-      ),
-    )
-    const fail = result.failed.length ? `，失败 ${result.failed.length}` : ''
-    ElMessage.success(
-      `同步完成：更新端口 ${result.updated}、更换端口 ${result.replaced}、改线段网络 ${result.renamed}、新增端口 ${result.placed}${fail}`,
-    )
+    let result: SyncResult | null = null
+    if (changes.length > 0) {
+      const syncActions: SyncAction[] = changes.map((c) => ({
+        action: c.action ?? 'place-port',
+        net: c.newNet,
+        x: c.x ?? 0,
+        y: c.y ?? 0,
+        direction: c.mode === 'OUTPUT' ? 'OUT' : 'IN',
+        rotation: c.rotation ?? 0,
+        portId: c.portId,
+        oldNet: c.oldNet,
+      }))
+      result = await withFreshWindow(() =>
+        applySyncActions(
+          port.value!,
+          syncActions,
+          selectedWindowId.value || undefined,
+        ),
+      )
+    }
+
+    // 配置属性写入 MCU 元件本身（otherProperty），网络端口/线段只表达网络名
+    const attrs: Record<string, string> = {}
+    for (const assignment of store.config.pins) {
+      Object.assign(attrs, buildPinAttributes(assignment))
+    }
+    let attrOk = false
+    if (pinMap.value?.componentId && Object.keys(attrs).length > 0) {
+      try {
+        attrOk = await withFreshWindow(() =>
+          writeMcuAttributes(
+            port.value!,
+            pinMap.value!.componentId,
+            attrs,
+            selectedWindowId.value || undefined,
+          ),
+        )
+      } catch {
+        attrOk = false
+      }
+    }
+
+    const parts: string[] = []
+    if (result) {
+      parts.push(
+        `更新端口 ${result.updated}、更换端口 ${result.replaced}、改线段网络 ${result.renamed}、新增端口 ${result.placed}`,
+      )
+      if (result.failed.length) parts.push(`失败 ${result.failed.length}`)
+    } else {
+      parts.push('无网络变更')
+    }
+    const attrCount = Object.keys(attrs).length
+    parts.push(attrCount === 0 ? '无属性可写' : attrOk ? `属性已写入 MCU（${attrCount} 项）` : '属性写入失败')
+    ElMessage.success(`同步完成：${parts.join('；')}`)
     exportPreview.value = null
     await loadPinMap()
   } catch (err) {
@@ -790,8 +821,8 @@ onMounted(() => {
         type="warning"
         :closable="false"
         show-icon
-        title="按引脚现有连接方式同步：端口改名/方向调整→删除重放；线段→改线段网络；未连→新增 IN/OUT 端口"
-        :description="`跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
+        title="按引脚现有连接方式同步；配置属性（模式/标签/上下拉/EXTI/输出参数）写入 MCU 元件本身"
+        :description="`网络名由端口/线段表达，属性写 MCU（PAx_MODE 等）；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
         style="margin-bottom: 8px"
       />
       <el-table :data="exportPreview.changes" size="small" max-height="280">
@@ -835,7 +866,10 @@ onMounted(() => {
       <el-button
         type="warning"
         :loading="exporting"
-        :disabled="!exportPreview || exportPreview.changes.length === 0"
+        :disabled="
+          !exportPreview ||
+          (exportPreview.changes.length === 0 && store.assignedCount === 0)
+        "
         @click="confirmExport"
       >
         执行同步

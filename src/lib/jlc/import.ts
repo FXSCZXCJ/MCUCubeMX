@@ -330,3 +330,22 @@ export function buildExportPlan(
     skipped: items.filter((i) => i.status === 'skip'),
   }
 }
+
+/**
+ * 把单个引脚的配置转成 EDA 属性（写入 MCU 元件的 otherProperty）：
+ * PA0_MODE / PA0_LABEL / PA0_OTYPE / PA0_SPEED / PA0_LEVEL / PA0_PULL / PA0_EXTI
+ */
+export function buildPinAttributes(pin: PinAssignment): Record<string, string> {
+  const attrs: Record<string, string> = {}
+  const base = pin.pin.trim().toUpperCase()
+  attrs[`${base}_MODE`] = pin.mode
+  if (pin.label) attrs[`${base}_LABEL`] = pin.label
+  if (pin.mode === 'OUTPUT') {
+    if (pin.params.outputType) attrs[`${base}_OTYPE`] = pin.params.outputType
+    if (pin.params.speed) attrs[`${base}_SPEED`] = pin.params.speed
+    if (pin.params.level) attrs[`${base}_LEVEL`] = pin.params.level
+  }
+  if (pin.params.pull && pin.params.pull !== 'NONE') attrs[`${base}_PULL`] = pin.params.pull
+  if (pin.params.exti?.enabled) attrs[`${base}_EXTI`] = pin.params.exti.edge
+  return attrs
+}

@@ -4,6 +4,7 @@ import {
   buildExportPlan,
   buildImportDiff,
   buildImportPlan,
+  buildPinAttributes,
   classifyEdaPin,
   matchDeviceIdBySymbol,
   normalizeEdaPinName,
@@ -172,6 +173,41 @@ describe('MCU 候选优先选中', () => {
     expect(list[0].primitiveId).toBe('e36')
     expect(list[1].primitiveId).toBe('e123')
     expect(preferred?.primitiveId).toBe('e36')
+  })
+})
+
+describe('引脚配置属性构建', () => {
+  it('输入引脚：MODE/LABEL/PULL/EXTI', () => {
+    const attrs = buildPinAttributes({
+      pin: 'pa0',
+      label: 'ADC',
+      mode: 'INPUT',
+      params: { pull: 'PULLUP', exti: { enabled: true, edge: 'FALLING' } },
+    })
+    expect(attrs).toMatchObject({
+      PA0_MODE: 'INPUT',
+      PA0_LABEL: 'ADC',
+      PA0_PULL: 'PULLUP',
+      PA0_EXTI: 'FALLING',
+    })
+    expect(attrs.PA0_OTYPE).toBeUndefined()
+  })
+
+  it('输出引脚：OTYPE/SPEED/LEVEL，NONE 上下拉不写', () => {
+    const attrs = buildPinAttributes({
+      pin: 'PA5',
+      label: 'LED_R',
+      mode: 'OUTPUT',
+      params: { outputType: 'OD', speed: '10', level: 'LOW', pull: 'NONE' },
+    })
+    expect(attrs).toMatchObject({
+      PA5_MODE: 'OUTPUT',
+      PA5_OTYPE: 'OD',
+      PA5_SPEED: '10',
+      PA5_LEVEL: 'LOW',
+    })
+    expect(attrs.PA5_PULL).toBeUndefined()
+    expect(attrs.PA5_EXTI).toBeUndefined()
   })
 })
 

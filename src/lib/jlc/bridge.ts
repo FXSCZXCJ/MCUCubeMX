@@ -355,3 +355,33 @@ for (const a of actions.filter((x) => x.action === 'place-port')) {
 return { updated, replaced, renamed, placed, failures };`
   return execute<SyncResult>(port, code, windowId)
 }
+
+/**
+ * 把 MCUCubeMX 配置属性写入 EDA 的 MCU 元件（otherProperty）。
+ * 自动清理不再配置的 GPIO 属性（PAx_MODE/LABEL/... 前缀键）。
+ */
+export async function writeMcuAttributes(
+  port: number,
+  componentId: string,
+  attributes: Record<string, string>,
+  windowId?: string,
+): Promise<boolean> {
+  if (Object.keys(attributes).length === 0) return true
+  const code = `
+const componentId = ${JSON.stringify(componentId)};
+const attributes = ${JSON.stringify(attributes)};
+const c = await eda.sch_PrimitiveComponent.get(componentId);
+if (!c) return false;
+let other = {};
+try { other = (await c.getState_OtherProperty()) || {}; } catch {}
+const merged = Object.assign({}, other);
+for (const k of Object.keys(merged)) {
+  if (/^P[ABCDEFGHJ]\\d+_(MODE|LABEL|OTYPE|SPEED|LEVEL|PULL|EXTI)$/i.test(k) && !(k in attributes)) {
+    delete merged[k];
+  }
+}
+for (const k of Object.keys(attributes)) merged[k] = attributes[k];
+await eda.sch_PrimitiveComponent.modify(componentId, { otherProperty: merged });
+return true;`
+  return execute<boolean>(port, code, windowId)
+}
