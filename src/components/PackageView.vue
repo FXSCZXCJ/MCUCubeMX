@@ -152,7 +152,7 @@ const LEGEND_LABELS: Record<string, string> = {
             :x="item.g.x + item.g.w / 2"
             :y="item.g.y + item.g.h / 2 + 3"
             text-anchor="middle"
-            font-size="8"
+            font-size="9"
             fill="#374151"
           >
             {{ item.pin.number }}
@@ -161,7 +161,7 @@ const LEGEND_LABELS: Record<string, string> = {
             :x="item.g.labelX"
             :y="item.g.labelY"
             :text-anchor="item.g.anchor"
-            font-size="9.5"
+            font-size="9"
             fill="#1f2329"
           >
             {{ item.pin.name }}

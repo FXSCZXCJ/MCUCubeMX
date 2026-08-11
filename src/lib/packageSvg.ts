@@ -1,10 +1,10 @@
 import type { PinDef } from '../types'
 
-export const PAD_W = 12
+export const PAD_W = 14
 export const PAD_LEN = 20
-export const BODY = 264
+export const BODY = 460
 export const PINS_PER_SIDE = 16
-export const LABEL_MARGIN = 30
+export const LABEL_MARGIN = 40
 export const MARGIN = PAD_LEN + LABEL_MARGIN
 export const SVG_SIZE = BODY + MARGIN * 2
 
