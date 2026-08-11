@@ -206,33 +206,25 @@ return { componentId: '${primitiveId}', designator, symbolName, name: nameAttr, 
   }
 }
 
-/** 把指定网络名整体重命名为新网络名（作用于当前图页所有同名导线） */
-export async function applyNetRenames(
+/**
+ * 在引脚旁放置网络端口标签：输入端 IN、输出端 OUT，网络名 = 标签。
+ * 不改动已有导线/线段；未连线引脚放置标签后即获得该网络名。
+ */
+export async function applyNetPorts(
   port: number,
-  renames: { from: string; to: string }[],
+  ports: { net: string; direction: 'IN' | 'OUT'; x: number; y: number }[],
   windowId?: string,
 ): Promise<number> {
-  if (renames.length === 0) return 0
+  if (ports.length === 0) return 0
   const code = `
-const renames = ${JSON.stringify(renames)};
-const wires = await eda.sch_PrimitiveWire.getAll();
-const byNet = {};
-for (const w of wires || []) {
-  let net = null;
-  try { net = await w.getState_Net(); } catch {}
-  if (!net) continue;
-  (byNet[net] = byNet[net] || []).push(w);
-}
+const ports = ${JSON.stringify(ports)};
 let count = 0;
-for (const r of renames) {
-  const list = byNet[r.from] || [];
-  for (const w of list) {
-    try {
-      const aw = w.toAsync ? w.toAsync() : w;
-      aw.setState_Net(r.to);
-      await aw.done();
-      count++;
-    } catch {}
+for (const p of ports) {
+  try {
+    await eda.sch_PrimitiveComponent.createNetPort(p.direction, p.net, p.x, p.y, 0, false);
+    count++;
+  } catch (err) {
+    console.error('[JLC] createNetPort failed:', err && err.message);
   }
 }
 return count;`

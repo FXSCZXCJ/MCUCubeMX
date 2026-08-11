@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
 import { useProjectStore } from '../stores/project'
 import { getDeviceData, deviceIds } from '../data/device'
 import {
-  applyNetRenames,
+  applyNetPorts,
   fetchMcuPinMap,
   fetchProjectInfo,
   findMcuCandidates,
@@ -424,12 +424,17 @@ async function confirmExport() {
   }
   exporting.value = true
   try {
-    const count = await applyNetRenames(
+    const count = await applyNetPorts(
       port.value,
-      changes.map((c) => ({ from: c.oldNet!, to: c.newNet })),
+      changes.map((c) => ({
+        net: c.newNet,
+        direction: c.mode === 'OUTPUT' ? 'OUT' : 'IN',
+        x: c.x ?? 0,
+        y: c.y ?? 0,
+      })),
       selectedWindowId.value || undefined,
     )
-    ElMessage.success(`已同步 ${count} 条网络到 EDA`)
+    ElMessage.success(`已放置 ${count} 个网络标签到 EDA`)
     exportPreview.value = null
     await loadPinMap()
   } catch (err) {
@@ -715,8 +720,8 @@ onMounted(() => {
         type="warning"
         :closable="false"
         show-icon
-        title="将把标签作为网络名，重命名原理图中对应网络（仅当前打开的图页）"
-        :description="`未连线引脚、未设置标签、网络重命名交叉的项会被跳过（共 ${exportPreview.skipped.length} 条）。`"
+        title="将在每个待同步引脚旁放置网络端口标签（网络名=标签），不改动已有线段"
+        :description="`输入端放置 IN 端口、输出端放置 OUT 端口；未连线引脚也会获得标签网络名；跳过 ${exportPreview.skipped.length} 条（无标签/特殊引脚/未找到引脚）。`"
         style="margin-bottom: 8px"
       />
       <el-table :data="exportPreview.changes" size="small" max-height="280">
@@ -732,7 +737,7 @@ onMounted(() => {
         </el-table-column>
       </el-table>
       <div class="summary">
-        将重命名 {{ exportPreview.changes.length }} 条网络；{{ exportPreview.kept.length }} 条无需改动；
+        将为 {{ exportPreview.changes.length }} 个引脚放置网络标签；{{ exportPreview.kept.length }} 条无需改动；
         跳过 {{ exportPreview.skipped.length }} 条。
       </div>
     </template>

@@ -185,9 +185,10 @@ export function buildImportDiff(
 
 /**
  * 构建“导出到 EDA”计划：把工程里带标签的引脚同步为原理图网络名。
- * 只做网络重命名（同一网络的所有导线），不做建线/删线：
- * - EDA 引脚未连线 → 跳过（需先在原理图连线）
- * - 网络重命名出现交叉/链式（A→B 且 B→A）→ 跳过，需手动处理
+ * 采用“放置网络端口标签”的方式（不改导线/线段）：
+ * - 输入端放置 IN 网络端口，输出端放置 OUT 网络端口，网络名 = 标签
+ * - 未连线的引脚也会放置标签（标签即网络名），已连线且同名则无需改动
+ * - 特殊引脚、无标签、EDA 中找不到的引脚跳过
  */
 export function buildExportPlan(
   device: DeviceData,
@@ -249,17 +250,6 @@ export function buildExportPlan(
       continue
     }
     const oldNet = edaPin.net
-    if (!oldNet) {
-      items.push({
-        pin: assignment.pin,
-        edaName: edaPin.name,
-        oldNet,
-        newNet: assignment.label,
-        status: 'skip',
-        skipReason: 'EDA 中该引脚未连线，请先在原理图连线',
-      })
-      continue
-    }
     if (oldNet === assignment.label) {
       items.push({
         pin: assignment.pin,
@@ -276,16 +266,10 @@ export function buildExportPlan(
       oldNet,
       newNet: assignment.label,
       status: 'change',
+      mode: assignment.mode,
+      x: edaPin.x,
+      y: edaPin.y,
     })
-  }
-
-  // 网络重命名交叉检测：A→B 且存在 B→C/…，或 A→B 且 B→A，逐条跳过
-  const changeFrom = new Set(items.filter((i) => i.status === 'change').map((i) => i.oldNet!))
-  for (const item of items) {
-    if (item.status === 'change' && changeFrom.has(item.newNet)) {
-      item.status = 'skip'
-      item.skipReason = '网络重命名与其他改动交叉，需手动处理'
-    }
   }
 
   return {

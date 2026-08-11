@@ -223,24 +223,33 @@ describe('导出到 EDA 计划构建', () => {
     { number: '3', name: 'PA5', x: 0, y: 0, net: null },
   ]
 
-  it('只生成有变化的网络重命名，其余按原因跳过', () => {
+  it('未连线引脚也放置标签，其余按原因跳过', () => {
     const plan = buildExportPlan(gd32, assignments, pinMap)
-    expect(plan.changes.map((c) => c.pin)).toEqual(['PA1'])
-    expect(plan.changes[0]).toMatchObject({ oldNet: 'INT', newNet: 'SDA' })
+    expect(plan.changes.map((c) => c.pin).sort()).toEqual(['PA1', 'PA5'])
+    expect(plan.changes.find((c) => c.pin === 'PA1')).toMatchObject({
+      oldNet: 'INT',
+      newNet: 'SDA',
+      mode: 'INPUT',
+      x: 0,
+      y: 0,
+    })
+    expect(plan.changes.find((c) => c.pin === 'PA5')).toMatchObject({
+      oldNet: null,
+      newNet: 'LED_R',
+    })
     expect(plan.kept.map((c) => c.pin)).toEqual(['PA0'])
     const skippedReason = new Map(plan.skipped.map((s) => [s.pin, s.skipReason]))
-    expect(skippedReason.get('PA5')).toContain('未连线')
     expect(skippedReason.get('PA2')).toContain('未设置标签')
     expect(skippedReason.get('PB2')).toContain('特殊引脚')
     expect(skippedReason.get('PA3')).toContain('未找到')
   })
 
-  it('网络重命名交叉时跳过冲突项', () => {
-    const plan = buildExportPlan(gd32, [
-      { pin: 'PA1', label: 'ADC', mode: 'INPUT', params: {} },
-      { pin: 'PA0', label: 'LED_R', mode: 'INPUT', params: {} },
-    ], pinMap)
-    expect(plan.changes.map((c) => c.pin)).toEqual(['PA0'])
-    expect(plan.skipped.find((s) => s.pin === 'PA1')?.skipReason).toContain('交叉')
+  it('输出引脚标记为 OUT 方向并带坐标', () => {
+    const plan = buildExportPlan(
+      gd32,
+      [{ pin: 'PA4', label: 'LED_R', mode: 'OUTPUT', params: {} }],
+      [{ number: '4', name: 'PA4', x: 100, y: 200, net: 'X' }],
+    )
+    expect(plan.changes[0]).toMatchObject({ mode: 'OUTPUT', x: 100, y: 200, newNet: 'LED_R' })
   })
 })

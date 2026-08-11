@@ -88,6 +88,11 @@ export interface ExportChangeItem {
   newNet: string
   status: ExportChangeStatus
   skipReason?: string
+  /** 输入/输出方向，决定放置 IN / OUT 网络端口 */
+  mode?: 'INPUT' | 'OUTPUT'
+  /** 引脚在原理图上的坐标（放置标签用） */
+  x?: number
+  y?: number
 }
 
 export interface ExportPlan {
