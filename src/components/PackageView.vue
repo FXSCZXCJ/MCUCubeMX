@@ -6,7 +6,6 @@ import {
   outsideLabelDy,
   packageGeometry,
   pinGeometry,
-  rotationBBoxFactor,
   type PinState,
 } from '../lib/packageSvg'
 import { useProjectStore } from '../stores/project'
@@ -16,6 +15,7 @@ const store = useProjectStore()
 const device = computed(() => store.deviceData.device)
 const geo = computed(() => packageGeometry(device.value))
 const viewRef = ref<HTMLElement | null>(null)
+const svgRef = ref<SVGSVGElement | null>(null)
 const autoFit = ref(true)
 const manualFactor = ref(1)
 const autoZoom = ref(1)
@@ -43,12 +43,28 @@ function updateAutoZoom() {
   const width = el.clientWidth
   const top = el.getBoundingClientRect().top
   const availHeight = window.innerHeight - top - 12 - CHROME_HEIGHT
-  const size = geo.value.svgSize
-  // 旋转后按轴对齐外接框占用空间计算自动适配（90° 时不缩小，45° 时 √2 倍）
-  const rotFactor = rotationBBoxFactor(rotation.value)
+  // 测量内容真实包围盒（含反向补偿后保持水平的文字），再按旋转角度精确换算
+  let w = geo.value.svgSize
+  let h = geo.value.svgSize
+  if (svgRef.value) {
+    try {
+      const bb = svgRef.value.getBBox()
+      if (bb.width > 0 && bb.height > 0) {
+        w = bb.width
+        h = bb.height
+      }
+    } catch {
+      /* 保持默认尺寸 */
+    }
+  }
+  const rad = (rotation.value * Math.PI) / 180
+  const c = Math.abs(Math.cos(rad))
+  const s = Math.abs(Math.sin(rad))
+  const rotW = w * c + h * s
+  const rotH = w * s + h * c
   autoZoom.value = Math.min(
     MAX_ZOOM,
-    Math.max(MIN_ZOOM, Math.min(width / (size * rotFactor), availHeight / (size * rotFactor))),
+    Math.max(MIN_ZOOM, Math.min(width / rotW, availHeight / rotH)),
   )
 }
 
@@ -208,6 +224,7 @@ function displayLabel(pin: PinDef): string | undefined {
     </div>
     <div class="package-stage">
       <svg
+        ref="svgRef"
         :width="geo.svgSize * effectiveZoom"
         :height="geo.svgSize * effectiveZoom"
         :viewBox="`0 0 ${geo.svgSize} ${geo.svgSize}`"
