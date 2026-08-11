@@ -19,7 +19,9 @@ export interface EdaProjectInfo {
   name?: string
   /** 当前打开的板（PCB/原理图所属板） */
   currentBoard?: string
-  boards?: { name: string; schematicName?: string }[]
+  /** 当前打开的原理图图页 */
+  currentPage?: string
+  boards?: { name: string; schematicName?: string; pages?: string[] }[]
 }
 
 export interface EdaComponentInfo {

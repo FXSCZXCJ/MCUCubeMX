@@ -555,6 +555,9 @@ onMounted(() => {
             <el-tag v-if="project.currentBoard" size="small" type="success">
               当前板：{{ project.currentBoard }}
             </el-tag>
+            <el-tag v-if="project.currentPage" size="small" type="success" effect="plain">
+              当前页：{{ project.currentPage }}
+            </el-tag>
           </template>
         </div>
         <el-collapse v-if="project && otherBoards.length" class="boards-collapse">
@@ -562,6 +565,17 @@ onMounted(() => {
             <div v-for="b in otherBoards" :key="b.name" class="board-item">
               {{ b.name }}
               <span v-if="b.schematicName" class="sub">· {{ b.schematicName }}</span>
+              <div v-if="b.pages?.length" class="pages">
+                <el-tag
+                  v-for="p in b.pages"
+                  :key="p"
+                  size="small"
+                  :type="b.name === project?.currentBoard && p === project?.currentPage ? 'success' : 'info'"
+                  class="page-tag"
+                >
+                  {{ p }}
+                </el-tag>
+              </div>
             </div>
           </el-collapse-item>
         </el-collapse>
@@ -866,5 +880,14 @@ onMounted(() => {
   font-size: 12px;
   padding: 3px 6px;
   color: #374151;
+}
+.pages {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.page-tag {
+  cursor: default;
 }
 </style>

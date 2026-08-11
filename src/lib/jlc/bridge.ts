@@ -99,13 +99,20 @@ try {
   const b = await eda.dmt_Board.getCurrentBoardInfo();
   currentBoard = (b && b.name) || '';
 } catch {}
+let currentPage = '';
+try {
+  const pg = await eda.dmt_Schematic.getCurrentSchematicPageInfo();
+  currentPage = (pg && pg.name) || '';
+} catch {}
 return {
   uuid: project.uuid,
   name: project.friendlyName || project.name,
   currentBoard,
+  currentPage,
   boards: (project.data || []).map((b) => ({
     name: b.name,
     schematicName: b.schematic && b.schematic.name,
+    pages: ((b.schematic && b.schematic.page) || []).map((p) => p.name),
   })),
 };`
   return execute<EdaProjectInfo | null>(port, code)
