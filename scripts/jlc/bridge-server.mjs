@@ -205,7 +205,7 @@ const httpServer = createServer(async (req, res) => {
         return;
       }
       activeEdaWindowId = windowId;
-      sendJson(res, 200, { success: true, activeWindowId });
+      sendJson(res, 200, { success: true, activeWindowId: activeEdaWindowId });
     }
     catch (err) {
       console.error('[HTTP] /eda-windows/select failed:', err.message);

@@ -5,6 +5,7 @@ import {
   findMcuCandidates,
   getEdaWindows,
   scanBridge,
+  selectEdaWindow,
 } from '../src/lib/jlc/bridge'
 
 // 本地 bridge-server 在线且 EDA 已连接时才运行；CI/离线环境自动跳过
@@ -18,6 +19,8 @@ describe('嘉立创桥集成测试', () => {
     expect(live).toBeTruthy()
     const windows = await getEdaWindows(live!.port)
     expect(windows.length).toBeGreaterThan(0)
+    const active = windows.find((w) => w.active) ?? windows[0]
+    await expect(selectEdaWindow(live!.port, active.windowId)).resolves.toBe(true)
   })
 
   it.runIf(run)('读取当前工程', async () => {
