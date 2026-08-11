@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { device } from '../data/device'
 import { PIN_COLORS, SVG_SIZE, BODY, MARGIN, pinGeometry, type PinState } from '../lib/packageSvg'
 import { useProjectStore } from '../stores/project'
 import type { PinDef } from '../types'
 
 const store = useProjectStore()
+const zoom = ref(1.25)
+
+function changeZoom(delta: number) {
+  zoom.value = Math.min(2.5, Math.max(0.5, Math.round((zoom.value + delta) * 20) / 20))
+}
 
 function stateOf(pin: PinDef): PinState {
   if (pin.type === 'POWER') return 'power'
@@ -37,79 +42,89 @@ const pins = computed(() =>
 
 <template>
   <div class="package-view">
-    <svg
-      :width="SVG_SIZE"
-      :height="SVG_SIZE"
-      :viewBox="`0 0 ${SVG_SIZE} ${SVG_SIZE}`"
-      class="package-svg"
-    >
-      <!-- 芯片本体 -->
-      <rect
-        :x="MARGIN"
-        :y="MARGIN"
-        :width="BODY"
-        :height="BODY"
-        rx="10"
-        fill="#ffffff"
-        stroke="#374151"
-        stroke-width="2"
-      />
-      <text
-        :x="SVG_SIZE / 2"
-        :y="SVG_SIZE / 2 - 8"
-        text-anchor="middle"
-        font-size="16"
-        font-weight="600"
-        fill="#374151"
+    <div class="package-toolbar">
+      <span class="zoom-label">显示比例 {{ Math.round(zoom * 100) }}%</span>
+      <el-button-group>
+        <el-button size="small" title="缩小" @click="changeZoom(-0.25)">−</el-button>
+        <el-button size="small" title="重置为 125%" @click="zoom = 1.25">重置</el-button>
+        <el-button size="small" title="放大" @click="changeZoom(0.25)">＋</el-button>
+      </el-button-group>
+    </div>
+    <div class="package-stage">
+      <svg
+        :width="SVG_SIZE * zoom"
+        :height="SVG_SIZE * zoom"
+        :viewBox="`0 0 ${SVG_SIZE} ${SVG_SIZE}`"
+        class="package-svg"
       >
-        GD32L233RCT6
-      </text>
-      <text :x="SVG_SIZE / 2" :y="SVG_SIZE / 2 + 14" text-anchor="middle" font-size="12" fill="#6b7280">
-        LQFP64 · Cortex-M23
-      </text>
-
-      <g
-        v-for="item in pins"
-        :key="item.pin.number"
-        class="pin"
-        :class="{ selectable: item.pin.type === 'IO' }"
-        @click="onPinClick(item.pin)"
-      >
-        <title>
-          {{ item.pin.name }}（封装脚 #{{ item.pin.number }}）{{
-            item.pin.aliases?.length ? ` · ${item.pin.aliases.join('/')}` : ''
-          }}
-        </title>
+        <!-- 芯片本体 -->
         <rect
-          :x="item.g.x"
-          :y="item.g.y"
-          :width="item.g.w"
-          :height="item.g.h"
-          rx="2"
-          :fill="item.color.fill"
-          :stroke="item.selected ? '#7c4dff' : item.color.stroke"
-          :stroke-width="item.selected ? 2.5 : 1"
+          :x="MARGIN"
+          :y="MARGIN"
+          :width="BODY"
+          :height="BODY"
+          rx="10"
+          fill="#ffffff"
+          stroke="#374151"
+          stroke-width="2"
         />
         <text
-          :x="item.g.x + item.g.w / 2"
-          :y="item.g.y + item.g.h / 2 + 3"
+          :x="SVG_SIZE / 2"
+          :y="SVG_SIZE / 2 - 8"
           text-anchor="middle"
-          font-size="8"
+          font-size="16"
+          font-weight="600"
           fill="#374151"
         >
-          {{ item.pin.number }}
+          GD32L233RCT6
         </text>
-        <text
-          :x="item.g.labelX"
-          :y="item.g.labelY"
-          :text-anchor="item.g.anchor"
-          font-size="9.5"
-          fill="#1f2329"
+        <text :x="SVG_SIZE / 2" :y="SVG_SIZE / 2 + 14" text-anchor="middle" font-size="12" fill="#6b7280">
+          LQFP64 · Cortex-M23
+        </text>
+
+        <g
+          v-for="item in pins"
+          :key="item.pin.number"
+          class="pin"
+          :class="{ selectable: item.pin.type === 'IO' }"
+          @click="onPinClick(item.pin)"
         >
-          {{ item.pin.name }}
-        </text>
-      </g>
-    </svg>
+          <title>
+            {{ item.pin.name }}（封装脚 #{{ item.pin.number }}）{{
+              item.pin.aliases?.length ? ` · ${item.pin.aliases.join('/')}` : ''
+            }}
+          </title>
+          <rect
+            :x="item.g.x"
+            :y="item.g.y"
+            :width="item.g.w"
+            :height="item.g.h"
+            rx="2"
+            :fill="item.color.fill"
+            :stroke="item.selected ? '#7c4dff' : item.color.stroke"
+            :stroke-width="item.selected ? 2.5 : 1"
+          />
+          <text
+            :x="item.g.x + item.g.w / 2"
+            :y="item.g.y + item.g.h / 2 + 3"
+            text-anchor="middle"
+            font-size="8"
+            fill="#374151"
+          >
+            {{ item.pin.number }}
+          </text>
+          <text
+            :x="item.g.labelX"
+            :y="item.g.labelY"
+            :text-anchor="item.g.anchor"
+            font-size="9.5"
+            fill="#1f2329"
+          >
+            {{ item.pin.name }}
+          </text>
+        </g>
+      </svg>
+    </div>
 
     <div class="legend">
       <span v-for="(color, key) in PIN_COLORS" :key="key" class="legend-item">
@@ -127,11 +142,27 @@ const pins = computed(() =>
   gap: 8px;
   align-items: center;
 }
-.package-svg {
-  max-width: 100%;
-  height: auto;
+.package-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+.zoom-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+.package-stage {
+  width: 100%;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
   background: #ffffff;
   border-radius: 8px;
+}
+.package-svg {
+  flex: none;
 }
 .pin.selectable {
   cursor: pointer;

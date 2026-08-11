@@ -159,7 +159,7 @@ async function clearAll() {
 }
 .app-main {
   display: grid;
-  grid-template-columns: minmax(420px, 1.15fr) minmax(360px, 1fr);
+  grid-template-columns: minmax(560px, 1.5fr) minmax(360px, 0.9fr);
   gap: 14px;
   padding: 14px 18px;
   overflow: auto;
@@ -168,6 +168,7 @@ async function clearAll() {
 .left {
   position: sticky;
   top: 0;
+  min-width: 0;
 }
 .right {
   display: flex;
