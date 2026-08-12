@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useProjectStore } from '../stores/project'
 import { validateClock } from '../lib/clock'
-import { buildClockTree } from '../lib/clock/tree'
+import { buildClockTree, peripheralsOf } from '../lib/clock/tree'
 
 const store = useProjectStore()
 const spec = computed(() => store.deviceData.clockSpec)
@@ -73,6 +73,10 @@ function summaryLabel(key: (typeof summaryKeys)[number]): string {
 function summaryVal(v: number | null): string {
   return v === null || !Number.isFinite(v) ? '—' : `${Math.round(v * 1000) / 1000} MHz`
 }
+
+function peripheralsOfNode(id: string): string[] {
+  return peripheralsOf(spec.value, id)
+}
 </script>
 
 <template>
@@ -124,6 +128,7 @@ function summaryVal(v: number | null): string {
             </text>
           </g>
           <g v-for="n in tree.nodes" :key="n.id" class="tree-node" @click="onNodeClick(n.id)">
+            <title>{{ n.title }}</title>
             <rect
               :x="n.x"
               :y="n.y"
@@ -247,6 +252,17 @@ function summaryVal(v: number | null): string {
           <span class="freq-val" :class="{ over: overLimit(validation.chain.ahbMhz, spec.ahb.maxMhz) }">
             {{ fmtFreq(validation.chain.ahbMhz, spec.ahb.maxMhz) }}
           </span>
+          <div class="peri-list">
+            <el-tag
+              v-for="peri in peripheralsOfNode('ahb')"
+              :key="peri"
+              size="small"
+              type="info"
+              effect="plain"
+            >
+              {{ peri }}
+            </el-tag>
+          </div>
         </section>
 
         <section id="sec-apb1" class="sec" :class="{ 'sec-focus': focus === 'apb1' }">
@@ -262,6 +278,17 @@ function summaryVal(v: number | null): string {
           <span class="freq-val" :class="{ over: overLimit(validation.chain.apb1Mhz, spec.apb1.maxMhz) }">
             {{ fmtFreq(validation.chain.apb1Mhz, spec.apb1.maxMhz) }}
           </span>
+          <div class="peri-list">
+            <el-tag
+              v-for="peri in peripheralsOfNode('apb1')"
+              :key="peri"
+              size="small"
+              type="info"
+              effect="plain"
+            >
+              {{ peri }}
+            </el-tag>
+          </div>
         </section>
 
         <section id="sec-apb2" class="sec" :class="{ 'sec-focus': focus === 'apb2' }">
@@ -277,6 +304,17 @@ function summaryVal(v: number | null): string {
           <span class="freq-val" :class="{ over: overLimit(validation.chain.apb2Mhz, spec.apb2.maxMhz) }">
             {{ fmtFreq(validation.chain.apb2Mhz, spec.apb2.maxMhz) }}
           </span>
+          <div class="peri-list">
+            <el-tag
+              v-for="peri in peripheralsOfNode('apb2')"
+              :key="peri"
+              size="small"
+              type="info"
+              effect="plain"
+            >
+              {{ peri }}
+            </el-tag>
+          </div>
         </section>
 
         <section id="sec-adc" class="sec" :class="{ 'sec-focus': focus === 'adc' }">
@@ -292,6 +330,17 @@ function summaryVal(v: number | null): string {
           <span class="freq-val" :class="{ over: overLimit(validation.chain.adcMhz, spec.adc.maxMhz) }">
             {{ fmtFreq(validation.chain.adcMhz, spec.adc.maxMhz) }}
           </span>
+          <div class="peri-list">
+            <el-tag
+              v-for="peri in peripheralsOfNode('adc')"
+              :key="peri"
+              size="small"
+              type="info"
+              effect="plain"
+            >
+              {{ peri }}
+            </el-tag>
+          </div>
         </section>
 
         <section class="sec">
@@ -463,6 +512,15 @@ function summaryVal(v: number | null): string {
   font-size: 12.5px;
   color: #374151;
   margin-left: 8px;
+}
+.peri-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.peri-list .el-tag {
+  margin-right: 0;
 }
 .over {
   color: #dc2626;

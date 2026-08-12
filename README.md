@@ -39,6 +39,8 @@
   与引脚图共用一个工作区：源 → PLL → SYSCLK → AHB → APB1/APB2 → ADC
 - 点击节点编辑对应参数（时钟源选择、HXTAL 频率、PLL 倍频/分频、总线分频、ADC 时钟），非法项红色高亮
 - 实时计算频率链并逐项校验：HXTAL 范围、PLL 输入/VCO/输出上限、SYSCLK/AHB/APB1/APB2/ADC 上限与分频档位
+- **外设挂载标注**：AHB/APB1/APB2/ADC 节点显示挂载外设数量，右侧编辑区列出完整清单
+  （如 APB1: TIMER1/2/5/6/11、SPI1、USART1、I2C0/1/2、LPUART…），SVG 悬停可见全部外设
 - 数据驱动（`clock.json`）：新增器件只需补一份时钟规格即可获得完整界面与代码生成
 
 ### 代码生成
@@ -117,8 +119,8 @@ F4xx 编译验证使用仓库自带的 CMSIS 5 内核头（`scripts/firmware/cms
   startup_gd32l233.S 向量表一致
 - `clock.json`：时钟树规格，转录自 GD32L23x 用户手册 Rev2.4 第 4 章（RCU）——
   IRC16M/IRC48M/HXTAL(4~32MHz)、PLL(×4~×127、输出≤64MHz)、AHB/APB1(≤32MHz)/APB2(≤64MHz)/ADC(≤16MHz)
-  分频档位与固件库宏映射；GD32F427VE 的 `clock.json` 转录自 GD32F4xx 用户手册（PLL
-  PSC/N/P/Q、SYSCLK≤200MHz、APB1≤60MHz、APB2≤120MHz、ADC≤40MHz）
+  分频档位、固件库宏映射与各总线挂载外设清单；GD32F427VE 的 `clock.json` 转录自
+  GD32F4xx 用户手册（PLL PSC/N/P/Q、SYSCLK≤200MHz、APB1≤60MHz、APB2≤120MHz、ADC≤40MHz）
 
 `scripts/validate-device-data.mjs` 强制执行一致性校验：引脚唯一连续、每边引脚数、
 AF 表与引脚定义集合一致、EXTI 分组正确、clock.json 档位/范围/宏映射齐全。

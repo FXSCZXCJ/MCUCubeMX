@@ -155,3 +155,17 @@ describe('mergeClockConfig', () => {
     expect(mergeClockConfig(l233, undefined)).toEqual(defaultClock(l233))
   })
 })
+
+describe('时钟总线外设挂载数据', () => {
+  for (const id of ['GD32L233RCT6', 'GD32F427VE']) {
+    const spec = getDeviceData(id).clockSpec
+    it(`${id}：各总线外设清单非空且无重复`, () => {
+      for (const bus of ['ahb', 'apb1', 'apb2', 'adc'] as const) {
+        const list = spec.peripherals?.[bus] ?? []
+        expect(list.length).toBeGreaterThan(0)
+        expect(new Set(list).size).toBe(list.length)
+        expect(list.every((name) => typeof name === 'string' && name.length > 0)).toBe(true)
+      }
+    })
+  }
+})

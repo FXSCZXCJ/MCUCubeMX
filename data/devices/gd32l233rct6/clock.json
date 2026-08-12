@@ -76,5 +76,33 @@
       "apb1": "RCU_APB1_CKAHB_DIV<div>",
       "apb2": "RCU_APB2_CKAHB_DIV<div>"
     }
+  },
+  "peripherals": {
+    "ahb": ["DMA", "CAU", "TRNG", "CRC", "GPIOA", "GPIOB", "GPIOC", "GPIOD", "GPIOF"],
+    "apb1": [
+      "TIMER1",
+      "TIMER2",
+      "TIMER5",
+      "TIMER6",
+      "TIMER11",
+      "LPTIMER",
+      "SLCD",
+      "WWDGT",
+      "SPI1",
+      "USART1",
+      "LPUART",
+      "UART3",
+      "UART4",
+      "I2C0",
+      "I2C1",
+      "I2C2",
+      "USBD",
+      "PMU",
+      "DAC",
+      "CTC",
+      "BKP"
+    ],
+    "apb2": ["SYSCFG", "CMP", "ADC", "TIMER8", "SPI0", "USART0", "DBGMCU"],
+    "adc": ["ADC"]
   }
 }

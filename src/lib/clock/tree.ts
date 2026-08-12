@@ -5,6 +5,8 @@ export interface ClockTreeNode {
   id: string
   label: string
   sub: string
+  /** SVG 悬停提示（如挂载外设列表） */
+  title?: string
   x: number
   y: number
   w: number
@@ -41,6 +43,23 @@ function fmt(v: number | null): string {
 
 function hasError(validation: ClockValidation, node: string): boolean {
   return validation.errors.some((e) => e.node === node)
+}
+
+/** 节点挂载的外设列表（无数据时返回空） */
+export function peripheralsOf(spec: ClockSpec, nodeId: string): string[] {
+  const p = spec.peripherals
+  if (!p) return []
+  if (nodeId === 'ahb') return p.ahb
+  if (nodeId === 'apb1') return p.apb1
+  if (nodeId === 'apb2') return p.apb2
+  if (nodeId === 'adc') return p.adc
+  return []
+}
+
+function periTitle(spec: ClockSpec, nodeId: string, label: string): string | undefined {
+  const list = peripheralsOf(spec, nodeId)
+  if (!list.length) return undefined
+  return `${label} 挂载外设：${list.join('、')}`
 }
 
 /**
@@ -121,7 +140,8 @@ export function buildClockTree(
   const ahbNode: ClockTreeNode = {
     id: 'ahb',
     label: 'AHB',
-    sub: `${fmt(chain.ahbMhz)} / 上限 ${spec.ahb.maxMhz} MHz`,
+    sub: `${fmt(chain.ahbMhz)} / 上限 ${spec.ahb.maxMhz} MHz · ${peripheralsOf(spec, 'ahb').length} 外设`,
+    title: periTitle(spec, 'ahb', 'AHB'),
     x: cx - 95,
     y: 324,
     w: 190,
@@ -139,10 +159,12 @@ export function buildClockTree(
     ['adc', 'ADC', `${fmt(chain.adcMhz)} / 上限 ${spec.adc.maxMhz} MHz`, 'leaf', hasError(validation, 'adc')],
   ]
   leaves.forEach(([id, label, sub, kind, error], i) => {
+    const count = peripheralsOf(spec, id).length
     nodes.push({
       id,
       label,
-      sub,
+      sub: `${sub} · ${count} 外设`,
+      title: periTitle(spec, id, label),
       x: 84 + i * 236,
       y: leafY,
       w: 190,

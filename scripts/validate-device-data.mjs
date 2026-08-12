@@ -172,6 +172,22 @@ function validateClockData(clock, fail) {
       fail('clock.adc.codegen 需要 api 与包含 <id> 的 argMacro')
     }
   }
+  for (const bus of ['ahb', 'apb1', 'apb2', 'adc']) {
+    const list = clock.peripherals?.[bus]
+    if (!Array.isArray(list) || list.length === 0) {
+      fail(`clock.peripherals.${bus} 不能为空`)
+    } else {
+      const seen = new Set()
+      for (const name of list) {
+        if (typeof name !== 'string' || !name.trim()) {
+          fail(`clock.peripherals.${bus} 含非法项`)
+          continue
+        }
+        if (seen.has(name)) fail(`clock.peripherals.${bus} 重复 ${name}`)
+        seen.add(name)
+      }
+    }
+  }
   const cg = clock.codegen
   if (!cg) return fail('clock.codegen 缺失')
   for (const s of clock.sources ?? []) {

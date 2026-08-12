@@ -40,4 +40,17 @@ describe('时钟树布局', () => {
     expect(tree.nodes.find((n) => n.id === 'apb1')?.error).toBe(true)
     expect(tree.edges.find((e) => e.id === 'ahb-apb1')?.error).toBe(true)
   })
+
+  it('总线节点标注挂载外设数量与悬停清单', () => {
+    const spec = getDeviceData('GD32L233RCT6').clockSpec
+    const config = defaultClock(spec)
+    const v = validateClock(spec, config)
+    const tree = buildClockTree(spec, config, v.chain, v)
+    const ahb = tree.nodes.find((n) => n.id === 'ahb')!
+    expect(ahb.sub).toContain(`${spec.peripherals!.ahb.length} 外设`)
+    expect(ahb.title).toContain('GPIOA')
+    const apb1 = tree.nodes.find((n) => n.id === 'apb1')!
+    expect(apb1.title).toContain('USART1')
+    expect(apb1.title).toContain('I2C0')
+  })
 })

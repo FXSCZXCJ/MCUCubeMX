@@ -180,6 +180,14 @@ export interface ClockCodegenSpec {
   highDriveMhz?: number
 }
 
+/** 各时钟总线挂载的外设（用于时钟树标注） */
+export interface ClockPeripheralsSpec {
+  ahb: string[]
+  apb1: string[]
+  apb2: string[]
+  adc: string[]
+}
+
 export interface ClockSpec {
   device: string
   source: string
@@ -191,6 +199,8 @@ export interface ClockSpec {
   apb2: ClockBusSpec
   adc: ClockAdcSpec
   codegen: ClockCodegenSpec
+  /** 各总线挂载的外设列表 */
+  peripherals?: ClockPeripheralsSpec
 }
 
 export interface ClockConfig {
