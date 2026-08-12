@@ -132,6 +132,8 @@ export type PinState =
   | 'unassigned'
   | 'output'
   | 'input'
+  | 'af'
+  | 'analog'
   | 'exti'
   | 'conflict'
   | 'power'
@@ -142,6 +144,8 @@ export const PIN_COLORS: Record<PinState, { fill: string; stroke: string }> = {
   unassigned: { fill: '#e9ebef', stroke: '#9aa2ad' },
   output: { fill: '#4caf50', stroke: '#2e7d32' },
   input: { fill: '#2196f3', stroke: '#1565c0' },
+  af: { fill: '#ab47bc', stroke: '#7b1fa2' },
+  analog: { fill: '#26a69a', stroke: '#00695c' },
   exti: { fill: '#ff9800', stroke: '#e65100' },
   conflict: { fill: '#f44336', stroke: '#b71c1c' },
   power: { fill: '#546e7a', stroke: '#263238' },

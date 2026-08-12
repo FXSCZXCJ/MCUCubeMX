@@ -111,6 +111,8 @@ function stateOf(pin: PinDef): PinState {
   const assignment = store.assignments[pin.name]
   if (assignment) {
     if (assignment.params.exti?.enabled) return 'exti'
+    if (assignment.mode === 'AF') return 'af'
+    if (assignment.mode === 'ANALOG') return 'analog'
     return assignment.mode === 'OUTPUT' ? 'output' : 'input'
   }
   if (pin.special) return 'special'
@@ -253,6 +255,8 @@ const LEGEND_LABELS: Record<string, string> = {
   unassigned: '未配置',
   output: '输出',
   input: '输入',
+  af: '复用(AF)',
+  analog: '模拟',
   exti: '外部中断',
   conflict: '冲突',
   power: '电源',
