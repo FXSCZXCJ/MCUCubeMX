@@ -296,6 +296,24 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
                   {{ n.sub }}
                 </text>
               </g>
+              <g
+                v-for="chip in tree.chips"
+                :key="`${chip.node}-${chip.label}`"
+                class="peri-chip"
+                @click="onNodeClick(chip.node)"
+              >
+                <title>点击聚焦 {{ chip.label }} 所属总线配置</title>
+                <rect :x="chip.x" :y="chip.y" :width="chip.w" height="16" rx="8" />
+                <text
+                  :x="chip.x + chip.w / 2"
+                  :y="chip.y + 11"
+                  text-anchor="middle"
+                  class="chip-text tree-text"
+                  :style="textStyle"
+                >
+                  {{ chip.label }}
+                </text>
+              </g>
             </svg>
           </div>
         </div>
@@ -646,6 +664,23 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
 }
 .tree-node rect {
   stroke-width: 1.6;
+}
+.peri-chip {
+  cursor: pointer;
+}
+.peri-chip rect {
+  fill: #eef2ff;
+  stroke: #c7d2fe;
+  stroke-width: 1;
+  transition: fill 0.15s ease;
+}
+.peri-chip:hover rect {
+  fill: #e0e7ff;
+}
+.chip-text {
+  font-size: 8.5px;
+  font-weight: 600;
+  fill: #3730a3;
 }
 .node-source {
   stroke-dasharray: 4 3;

@@ -53,4 +53,20 @@ describe('时钟树布局', () => {
     expect(apb1.title).toContain('USART1')
     expect(apb1.title).toContain('I2C0')
   })
+
+  it('APB1/APB2/ADC 节点下方渲染外设标签', () => {
+    const spec = getDeviceData('GD32L233RCT6').clockSpec
+    const config = defaultClock(spec)
+    const v = validateClock(spec, config)
+    const tree = buildClockTree(spec, config, v.chain, v)
+    const apb1Chips = tree.chips.filter((c) => c.node === 'apb1').map((c) => c.label)
+    const apb2Chips = tree.chips.filter((c) => c.node === 'apb2').map((c) => c.label)
+    const adcChips = tree.chips.filter((c) => c.node === 'adc').map((c) => c.label)
+    expect(apb1Chips).toContain('USART1')
+    expect(apb1Chips).toContain('I2C0')
+    expect(apb2Chips).toContain('USART0')
+    expect(adcChips).toEqual(['ADC'])
+    expect(apb1Chips.length).toBe(spec.peripherals!.apb1.length)
+    expect(tree.height).toBeGreaterThan(500)
+  })
 })

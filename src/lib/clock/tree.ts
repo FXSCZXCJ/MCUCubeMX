@@ -27,11 +27,21 @@ export interface ClockTreeEdge {
   path: string
 }
 
+/** 挂在总线节点下方的外设小标签（SVG chip） */
+export interface ClockTreeChip {
+  node: string
+  label: string
+  x: number
+  y: number
+  w: number
+}
+
 export interface ClockTreeLayout {
   width: number
   height: number
   nodes: ClockTreeNode[]
   edges: ClockTreeEdge[]
+  chips: ClockTreeChip[]
 }
 
 export const NODE_W = 150
@@ -75,7 +85,6 @@ export function buildClockTree(
   validation: ClockValidation,
 ): ClockTreeLayout {
   const width = 760
-  const height = 500
   const cx = width / 2
   const sourceW = 150
   const sourceGap = 176
@@ -160,9 +169,10 @@ export function buildClockTree(
     ['apb2', 'APB2', `${fmt(chain.apb2Mhz)} / 上限 ${spec.apb2.maxMhz} MHz`, 'leaf', hasError(validation, 'apb2')],
     ['adc', 'ADC', `${fmt(chain.adcMhz)} / 上限 ${spec.adc.maxMhz} MHz`, 'leaf', hasError(validation, 'adc')],
   ]
+  const leafNodes: ClockTreeNode[] = []
   leaves.forEach(([id, label, sub, kind, error], i) => {
     const count = peripheralsOf(spec, id).length
-    nodes.push({
+    const node: ClockTreeNode = {
       id,
       label,
       sub: `${sub} · ${count} 外设`,
@@ -174,8 +184,35 @@ export function buildClockTree(
       kind: kind as 'leaf',
       active: true,
       error,
-    })
+    }
+    nodes.push(node)
+    leafNodes.push(node)
   })
+
+  // 总线节点下方的外设小标签（按节点宽度自动换行）
+  const chips: ClockTreeChip[] = []
+  const chipRowH = 18
+  let maxChipRows = 0
+  for (const leaf of leafNodes) {
+    const list = peripheralsOf(spec, leaf.id)
+    if (!list.length) continue
+    const shelfLeft = leaf.x + 5
+    const shelfRight = leaf.x + leaf.w - 5
+    let x = shelfLeft
+    let y = leafY + NODE_H + 8
+    let rows = 1
+    for (const name of list) {
+      const w = Math.max(30, name.length * 7.5 + 14)
+      if (x + w > shelfRight) {
+        x = shelfLeft
+        y += chipRowH
+        rows++
+      }
+      chips.push({ node: leaf.id, label: name, x, y, w })
+      x += w + 5
+    }
+    maxChipRows = Math.max(maxChipRows, rows)
+  }
 
   const edges: ClockTreeEdge[] = []
   const edge = (
@@ -217,5 +254,6 @@ export function buildClockTree(
     edge('adc-src', from, 'adc', `÷${adcOpt.div}`, true, hasError(validation, 'adc'))
   }
 
-  return { width, height, nodes, edges }
+  const totalHeight = Math.max(500, leafY + NODE_H + 8 + maxChipRows * chipRowH + 16)
+  return { width, height: totalHeight, nodes, edges, chips }
 }
