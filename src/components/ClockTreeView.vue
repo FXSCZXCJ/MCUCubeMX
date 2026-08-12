@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useProjectStore } from '../stores/project'
 import { validateClock } from '../lib/clock'
 import { buildClockTree, peripheralsOf } from '../lib/clock/tree'
 import { normalizeRotation } from '../lib/packageSvg'
+import { downloadBlob } from '../lib/codegen'
+import ViewToolbar from './ViewToolbar.vue'
 
 const store = useProjectStore()
 const spec = computed(() => store.deviceData.clockSpec)
@@ -90,6 +93,63 @@ function reset() {
 function onWheel(event: WheelEvent) {
   const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1
   manualFactor.value = Math.min(2, Math.max(0.5, manualFactor.value * factor))
+}
+
+const EXPORT_SCALE = 2
+
+/** 序列化当前时钟树 SVG（保留旋转与文字反向补偿样式），用于导出 */
+function buildExportSvg(): string {
+  const svg = svgRef.value
+  if (!svg) return ''
+  const clone = svg.cloneNode(true) as SVGSVGElement
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+  if (clone.style.transform) {
+    clone.style.transform = clone.style.transform.replace(/translate\([^)]*\)\s*/g, '').trim()
+  }
+  const style = document.createElementNS('http://www.w3.org/2000/svg', 'style')
+  style.textContent = '.tree-text{transform-box:fill-box;transform-origin:center;}'
+  clone.insertBefore(style, clone.firstChild)
+  clone.setAttribute('width', String(tree.value.width * EXPORT_SCALE))
+  clone.setAttribute('height', String(tree.value.height * EXPORT_SCALE))
+  return new XMLSerializer().serializeToString(clone)
+}
+
+function exportSvg() {
+  const str = buildExportSvg()
+  if (!str) return
+  downloadBlob(new Blob([str], { type: 'image/svg+xml' }), `clock-${spec.value.device}.svg`)
+  ElMessage.success('时钟树 SVG 已导出')
+}
+
+function exportPng() {
+  const str = buildExportSvg()
+  if (!str) return
+  const sizeW = tree.value.width * EXPORT_SCALE
+  const sizeH = tree.value.height * EXPORT_SCALE
+  const img = new Image()
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = sizeW
+    canvas.height = sizeH
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      ElMessage.error('无法创建画布')
+      return
+    }
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, sizeW, sizeH)
+    ctx.drawImage(img, 0, 0, sizeW, sizeH)
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        ElMessage.error('PNG 生成失败')
+        return
+      }
+      downloadBlob(blob, `clock-${spec.value.device}.png`)
+      ElMessage.success('时钟树 PNG 已导出')
+    }, 'image/png')
+  }
+  img.onerror = () => ElMessage.error('SVG 渲染失败，无法导出 PNG')
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(str)}`
 }
 
 onMounted(() => {
@@ -184,24 +244,20 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
       </div>
     </div>
 
+    <ViewToolbar
+      :zoom="effectiveZoom"
+      :rotation="rotation"
+      :auto-fit="autoFit"
+      @update:auto-fit="autoFit = $event"
+      @zoom="changeManual"
+      @reset="reset"
+      @rotate="rotateBy"
+      @export-svg="exportSvg"
+      @export-png="exportPng"
+    />
+
     <div class="clock-body">
       <div class="tree-pane">
-        <div class="clock-toolbar">
-          <span class="zoom-label">显示比例 {{ Math.round(effectiveZoom * 100) }}%</span>
-          <el-switch v-model="autoFit" size="small" active-text="自动适配" />
-          <el-button-group>
-            <el-button size="small" title="缩小" @click="changeManual(-0.25)">−</el-button>
-            <el-button size="small" title="重置缩放与旋转" @click="reset">重置</el-button>
-            <el-button size="small" title="放大" @click="changeManual(0.25)">＋</el-button>
-          </el-button-group>
-          <span class="zoom-label">旋转 {{ rotation }}°</span>
-          <el-button-group>
-            <el-button size="small" title="逆时针旋转 45°" @click="rotateBy(-45)">⟲45°</el-button>
-            <el-button size="small" title="复位旋转" @click="rotateBy(360 - rotation)">复位</el-button>
-            <el-button size="small" title="顺时针旋转 45°" @click="rotateBy(45)">⟳45°</el-button>
-          </el-button-group>
-          <span class="zoom-label">滚轮缩放</span>
-        </div>
         <div ref="stageRef" class="clock-stage" @wheel.prevent="onWheel">
           <div
             class="clock-rotator"
@@ -600,17 +656,6 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   padding: 8px;
   background: #fafbfc;
   gap: 6px;
-}
-.clock-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  flex: none;
-}
-.zoom-label {
-  font-size: 12px;
-  color: #6b7280;
 }
 .clock-stage {
   flex: 1;

@@ -12,6 +12,7 @@ import {
 import { downloadBlob } from '../lib/codegen'
 import { useProjectStore } from '../stores/project'
 import { groupOfPin } from '../lib/groups'
+import ViewToolbar from './ViewToolbar.vue'
 import type { PinDef } from '../types'
 
 const store = useProjectStore()
@@ -292,23 +293,25 @@ function displayLabel(pin: PinDef): string | undefined {
 
 <template>
   <div ref="viewRef" class="package-view">
-    <div class="package-toolbar">
-      <span class="zoom-label">显示比例 {{ Math.round(effectiveZoom * 100) }}%</span>
-      <el-switch v-model="autoFit" size="small" active-text="自动适配" />
-      <el-button-group>
-        <el-button size="small" title="缩小" @click="changeManual(-0.25)">−</el-button>
-        <el-button size="small" title="重置：自动适配 100%" @click="reset">重置</el-button>
-        <el-button size="small" title="放大" @click="changeManual(0.25)">＋</el-button>
-      </el-button-group>
-      <span class="zoom-label">旋转 {{ rotation }}°</span>
-      <el-button-group>
-        <el-button size="small" title="逆时针旋转 45°" @click="rotateBy(-45)">⟲45°</el-button>
-        <el-button size="small" title="复位旋转" @click="rotateBy(360 - rotation)">复位</el-button>
-        <el-button size="small" title="顺时针旋转 45°" @click="rotateBy(45)">⟳45°</el-button>
-      </el-button-group>
-      <el-button size="small" @click="exportSvg">导出 SVG</el-button>
-      <el-button size="small" @click="exportPng">导出 PNG</el-button>
+    <div class="view-header">
+      <div class="view-title">GPIO 封装图</div>
+      <div class="view-tools">
+        <el-tag size="small" type="info">
+          {{ device.device }} · {{ device.package }} · {{ device.core }}
+        </el-tag>
+      </div>
     </div>
+    <ViewToolbar
+      :zoom="effectiveZoom"
+      :rotation="rotation"
+      :auto-fit="autoFit"
+      @update:auto-fit="autoFit = $event"
+      @zoom="changeManual"
+      @reset="reset"
+      @rotate="rotateBy"
+      @export-svg="exportSvg"
+      @export-png="exportPng"
+    />
     <div ref="stageRef" class="package-stage" @wheel.prevent="onWheel">
       <div
         class="package-rotator"
@@ -491,19 +494,24 @@ function displayLabel(pin: PinDef): string | undefined {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  align-items: center;
   height: calc(100vh - 196px);
+  width: 100%;
 }
-.package-toolbar {
+.view-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: none;
 }
-.zoom-label {
-  font-size: 12px;
-  color: #6b7280;
+.view-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.view-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .package-stage {
   width: 100%;
@@ -587,6 +595,11 @@ function displayLabel(pin: PinDef): string | undefined {
   justify-content: center;
   font-size: 12px;
   color: #4b5563;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #ffffff;
+  flex: none;
 }
 .legend-item {
   display: inline-flex;
