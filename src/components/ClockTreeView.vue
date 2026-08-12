@@ -566,7 +566,6 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   flex-direction: column;
   gap: 10px;
   height: calc(100vh - 196px);
-  min-height: 460px;
   min-width: 920px;
 }
 .view-header {

@@ -18,6 +18,7 @@ const store = useProjectStore()
 const device = computed(() => store.deviceData.device)
 const geo = computed(() => packageGeometry(device.value))
 const viewRef = ref<HTMLElement | null>(null)
+const stageRef = ref<HTMLElement | null>(null)
 const svgRef = ref<SVGSVGElement | null>(null)
 const autoFit = ref(true)
 const manualFactor = ref(1)
@@ -31,8 +32,6 @@ const hoverPos = ref<{ x: number; y: number } | null>(null)
 const MIN_ZOOM = 0.4
 const MAX_ZOOM = 2.5
 const EXPORT_SCALE = 2
-// 面板内固定占用：工具栏 + 图例 + 间距 + 底部边距（用于按可用高度自适应）
-const CHROME_HEIGHT = 86
 
 const effectiveZoom = computed(() =>
   Math.min(
@@ -44,11 +43,11 @@ const effectiveZoom = computed(() =>
 let observer: ResizeObserver | null = null
 
 function updateAutoZoom() {
-  const el = viewRef.value
+  const el = stageRef.value ?? viewRef.value
   if (!el) return
   const width = el.clientWidth
-  const top = el.getBoundingClientRect().top
-  const availHeight = window.innerHeight - top - 12 - CHROME_HEIGHT
+  const height = el.clientHeight
+  if (width <= 0 || height <= 0) return
   // 测量内容真实包围盒（含反向补偿后保持水平的文字），再按旋转角度精确换算
   let w = geo.value.svgSize
   let h = geo.value.svgSize
@@ -72,7 +71,7 @@ function updateAutoZoom() {
   bboxH.value = rotH
   autoZoom.value = Math.min(
     MAX_ZOOM,
-    Math.max(MIN_ZOOM, Math.min(width / rotW, availHeight / rotH)),
+    Math.max(MIN_ZOOM, Math.min(width / rotW, height / rotH)),
   )
 }
 
@@ -83,7 +82,7 @@ function rotateBy(delta: number) {
 
 onMounted(() => {
   observer = new ResizeObserver(updateAutoZoom)
-  if (viewRef.value) observer.observe(viewRef.value)
+  if (stageRef.value) observer.observe(stageRef.value)
   window.addEventListener('resize', updateAutoZoom)
   updateAutoZoom()
 })
@@ -310,7 +309,7 @@ function displayLabel(pin: PinDef): string | undefined {
       <el-button size="small" @click="exportSvg">导出 SVG</el-button>
       <el-button size="small" @click="exportPng">导出 PNG</el-button>
     </div>
-    <div class="package-stage" @wheel.prevent="onWheel">
+    <div ref="stageRef" class="package-stage" @wheel.prevent="onWheel">
       <div
         class="package-rotator"
         :style="{
@@ -493,6 +492,7 @@ function displayLabel(pin: PinDef): string | undefined {
   flex-direction: column;
   gap: 8px;
   align-items: center;
+  height: calc(100vh - 196px);
 }
 .package-toolbar {
   display: flex;
@@ -513,6 +513,8 @@ function displayLabel(pin: PinDef): string | undefined {
   align-items: center;
   background: #ffffff;
   border-radius: 8px;
+  flex: 1;
+  min-height: 0;
 }
 .package-rotator {
   position: relative;
