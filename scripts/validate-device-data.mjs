@@ -188,6 +188,28 @@ function validateClockData(clock, fail) {
       }
     }
   }
+  if (clock.clockSelect !== undefined) {
+    if (typeof clock.clockSelect !== 'object' || Array.isArray(clock.clockSelect)) {
+      fail('clock.clockSelect 应为对象')
+    } else {
+      for (const [peri, options] of Object.entries(clock.clockSelect)) {
+        if (!peri.trim()) fail('clock.clockSelect 含空外设名')
+        if (!Array.isArray(options) || options.length === 0) {
+          fail(`clock.clockSelect.${peri} 可选时钟源不能为空`)
+          continue
+        }
+        const seen = new Set()
+        for (const opt of options) {
+          if (typeof opt !== 'string' || !opt.trim()) {
+            fail(`clock.clockSelect.${peri} 含非法选项`)
+            continue
+          }
+          if (seen.has(opt)) fail(`clock.clockSelect.${peri} 重复选项 ${opt}`)
+          seen.add(opt)
+        }
+      }
+    }
+  }
   const cg = clock.codegen
   if (!cg) return fail('clock.codegen 缺失')
   for (const s of clock.sources ?? []) {

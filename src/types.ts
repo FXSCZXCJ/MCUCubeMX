@@ -201,6 +201,8 @@ export interface ClockSpec {
   codegen: ClockCodegenSpec
   /** 各总线挂载的外设列表 */
   peripherals?: ClockPeripheralsSpec
+  /** 可选时钟源的外设：外设名 → 可选时钟源列表（如 USART0 → [APB2, SYSCLK, LXTAL, IRC16MDIV]） */
+  clockSelect?: Record<string, string[]>
 }
 
 export interface ClockConfig {

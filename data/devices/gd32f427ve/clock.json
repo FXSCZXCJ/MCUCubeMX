@@ -167,5 +167,17 @@
       "TLI"
     ],
     "adc": ["ADC0", "ADC1", "ADC2"]
+  },
+  "clockSelect": {
+    "ADC0": ["APB2", "AHB"],
+    "ADC1": ["APB2", "AHB"],
+    "ADC2": ["APB2", "AHB"],
+    "USBHS": ["IRC48M", "PLL48M"],
+    "USBFS": ["IRC48M", "PLL48M"],
+    "TRNG": ["IRC48M", "PLL48M"],
+    "I2S0": ["PLLI2S", "I2S_CKIN"],
+    "I2S1": ["PLLI2S", "I2S_CKIN"],
+    "I2S2": ["PLLI2S", "I2S_CKIN"],
+    "RTC": ["LXTAL", "IRC32K", "HXTAL128"]
   }
 }

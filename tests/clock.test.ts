@@ -169,3 +169,31 @@ describe('时钟总线外设挂载数据', () => {
     })
   }
 })
+
+describe('可选时钟源外设数据', () => {
+  it('L233：USART/I2C/LPTIMER/ADC/USBD/RTC 等外设可切换时钟源', () => {
+    const spec = getDeviceData('GD32L233RCT6').clockSpec
+    const select = spec.clockSelect ?? {}
+    expect(select['USART0']).toEqual(['APB2', 'SYSCLK', 'LXTAL', 'IRC16MDIV'])
+    expect(select['USART1']).toContain('APB1')
+    expect(select['I2C0']).toContain('SYSCLK')
+    expect(select['LPTIMER']).toContain('LXTAL')
+    expect(select['ADC']).toEqual(['APB2', 'AHB', 'IRC16M'])
+    expect(select['RTC']).toContain('LXTAL')
+    expect(select['FWDGT']).toEqual(['IRC32K'])
+    for (const options of Object.values(select)) {
+      expect(options.length).toBeGreaterThan(0)
+      expect(new Set(options).size).toBe(options.length)
+    }
+  })
+
+  it('F427：ADC/48M 域/I2S/RTC 外设可切换时钟源', () => {
+    const spec = getDeviceData('GD32F427VE').clockSpec
+    const select = spec.clockSelect ?? {}
+    expect(select['ADC0']).toEqual(['APB2', 'AHB'])
+    expect(select['USBHS']).toEqual(['IRC48M', 'PLL48M'])
+    expect(select['I2S0']).toEqual(['PLLI2S', 'I2S_CKIN'])
+    expect(select['RTC']).toEqual(['LXTAL', 'IRC32K', 'HXTAL128'])
+    expect(Object.keys(select).length).toBeGreaterThanOrEqual(10)
+  })
+})

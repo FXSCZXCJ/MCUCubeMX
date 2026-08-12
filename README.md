@@ -41,6 +41,9 @@
 - 实时计算频率链并逐项校验：HXTAL 范围、PLL 输入/VCO/输出上限、SYSCLK/AHB/APB1/APB2/ADC 上限与分频档位
 - **外设挂载标注**：AHB/APB1/APB2/ADC 节点显示挂载外设数量，右侧编辑区列出完整清单
   （如 APB1: TIMER1/2/5/6/11、SPI1、USART1、I2C0/1/2、LPUART…），SVG 悬停可见全部外设
+- **可选时钟源标注**：右侧「可选时钟源的外设」面板列出可切换时钟的外设及其选项
+  （如 USART0 → APB2/SYSCLK/LXTAL/IRC16MDIV、ADC → APB2/AHB/IRC16M、
+  USBD → IRC48M/PLL、RTC → LXTAL/IRC32K/HXTAL32），未列出的外设跟随所在总线时钟
 - 数据驱动（`clock.json`）：新增器件只需补一份时钟规格即可获得完整界面与代码生成
 
 ### 代码生成

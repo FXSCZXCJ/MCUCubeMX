@@ -104,5 +104,20 @@
     ],
     "apb2": ["SYSCFG", "CMP", "ADC", "TIMER8", "SPI0", "USART0", "DBGMCU"],
     "adc": ["ADC"]
+  },
+  "clockSelect": {
+    "USART0": ["APB2", "SYSCLK", "LXTAL", "IRC16MDIV"],
+    "USART1": ["APB1", "SYSCLK", "LXTAL", "IRC16MDIV"],
+    "LPUART": ["APB1", "SYSCLK", "LXTAL", "IRC16MDIV"],
+    "I2C0": ["APB1", "SYSCLK", "IRC16MDIV"],
+    "I2C1": ["APB1", "SYSCLK", "IRC16MDIV"],
+    "I2C2": ["APB1", "SYSCLK", "IRC16MDIV"],
+    "LPTIMER": ["APB1", "SYSCLK", "LXTAL", "IRC16MDIV"],
+    "ADC": ["APB2", "AHB", "IRC16M"],
+    "USBD": ["IRC48M", "PLL"],
+    "TRNG": ["PLL"],
+    "RTC": ["LXTAL", "IRC32K", "HXTAL32"],
+    "FWDGT": ["IRC32K"],
+    "CTC": ["HXTAL"]
   }
 }

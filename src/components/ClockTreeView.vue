@@ -77,6 +77,8 @@ function summaryVal(v: number | null): string {
 function peripheralsOfNode(id: string): string[] {
   return peripheralsOf(spec.value, id)
 }
+
+const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect ?? {}))
 </script>
 
 <template>
@@ -344,6 +346,24 @@ function peripheralsOfNode(id: string): string[] {
         </section>
 
         <section class="sec">
+          <div class="sec-title">
+            可选时钟源的外设
+            <el-tag size="small" type="info">{{ clockSelectEntries.length }} 个</el-tag>
+          </div>
+          <div class="select-list">
+            <div v-for="[peri, options] in clockSelectEntries" :key="peri" class="select-row">
+              <span class="select-name">{{ peri }}</span>
+              <span class="select-opts">
+                <el-tag v-for="opt in options" :key="opt" size="small" type="warning" effect="plain">
+                  {{ opt }}
+                </el-tag>
+              </span>
+            </div>
+          </div>
+          <div class="hint">未列出的外设直接使用所在总线时钟（如 TIMER 跟随 APB 分频）。</div>
+        </section>
+
+        <section class="sec">
           <div class="sec-title">校验结果</div>
           <ul v-if="validation.issues.length" class="issue-list">
             <li v-for="(iss, i) in validation.issues" :key="i" :class="iss.severity">
@@ -521,6 +541,29 @@ function peripheralsOfNode(id: string): string[] {
 }
 .peri-list .el-tag {
   margin-right: 0;
+}
+.select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.select-name {
+  width: 72px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1f2937;
+  flex-shrink: 0;
+}
+.select-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 .over {
   color: #dc2626;
