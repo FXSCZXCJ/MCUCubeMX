@@ -35,7 +35,8 @@
 
 ### 时钟树配置
 
-- 工具栏「时钟」打开**图形化 SVG 时钟树**：源 → PLL → SYSCLK → AHB → APB1/APB2 → ADC
+- 左侧面板「GPIO / 时钟」按钮**同屏切换**：时钟模式下显示**图形化 SVG 时钟树**，
+  与引脚图共用一个工作区：源 → PLL → SYSCLK → AHB → APB1/APB2 → ADC
 - 点击节点编辑对应参数（时钟源选择、HXTAL 频率、PLL 倍频/分频、总线分频、ADC 时钟），非法项红色高亮
 - 实时计算频率链并逐项校验：HXTAL 范围、PLL 输入/VCO/输出上限、SYSCLK/AHB/APB1/APB2/ADC 上限与分频档位
 - 数据驱动（`clock.json`）：新增器件只需补一份时钟规格即可获得完整界面与代码生成

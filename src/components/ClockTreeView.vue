@@ -1,42 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { useProjectStore } from '../stores/project'
-import type { ClockConfig } from '../types'
-import { defaultClock, validateClock } from '../lib/clock'
+import { validateClock } from '../lib/clock'
 import { buildClockTree } from '../lib/clock/tree'
-
-defineProps<{ modelValue: boolean }>()
-const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 
 const store = useProjectStore()
 const spec = computed(() => store.deviceData.clockSpec)
-const draft = ref<ClockConfig>(JSON.parse(JSON.stringify(store.clock)))
+const config = computed(() => store.clock)
 const focus = ref<string | null>(null)
 
-const validation = computed(() => validateClock(spec.value, draft.value))
+const validation = computed(() => validateClock(spec.value, config.value))
 const tree = computed(() =>
-  buildClockTree(spec.value, draft.value, validation.value.chain, validation.value),
+  buildClockTree(spec.value, config.value, validation.value.chain, validation.value),
 )
-
-function close() {
-  emit('update:modelValue', false)
-}
-
-function open() {
-  draft.value = JSON.parse(JSON.stringify(store.clock))
-  focus.value = null
-}
-
-function apply() {
-  store.setClock(JSON.parse(JSON.stringify(draft.value)))
-  ElMessage.success('时钟配置已应用')
-  close()
-}
-
-function reset() {
-  draft.value = defaultClock(spec.value)
-}
 
 function nodeSection(id: string): string {
   if (id === 'pll') return 'pll'
@@ -50,15 +26,15 @@ function nodeSection(id: string): string {
 
 function onNodeClick(id: string) {
   // 点击 PLL 节点且当前未启用 PLL 时，先切换系统源为 PLL
-  if (id === 'pll' && draft.value.source !== 'PLL') {
-    draft.value = { ...draft.value, source: 'PLL' }
+  if (id === 'pll' && config.value.source !== 'PLL') {
+    store.setClock({ source: 'PLL' })
   }
   focus.value = nodeSection(id)
 }
 
 function setPllParam(key: string, value: number | undefined) {
   if (value === undefined) return
-  draft.value = { ...draft.value, pll: { ...draft.value.pll, [key]: value } }
+  store.setClock({ pll: { ...config.value.pll, [key]: value } })
 }
 
 function nodeOf(id: string) {
@@ -100,15 +76,18 @@ function summaryVal(v: number | null): string {
 </script>
 
 <template>
-  <el-dialog
-    :model-value="modelValue"
-    title="时钟树配置"
-    width="82%"
-    top="4vh"
-    @open="open"
-    @close="close"
-  >
-    <div class="clock-dialog">
+  <div class="clock-view">
+    <div class="view-header">
+      <div class="view-title">时钟树配置</div>
+      <div class="view-tools">
+        <el-tag :type="validation.ok ? 'success' : 'danger'" size="small">
+          {{ validation.ok ? '链路合法' : `${validation.errors.length} 项错误` }}
+        </el-tag>
+        <el-button size="small" @click="store.resetClock()">恢复默认</el-button>
+      </div>
+    </div>
+
+    <div class="clock-body">
       <div class="tree-pane">
         <svg :viewBox="`0 0 ${tree.width} ${tree.height}`" class="clock-svg">
           <defs>
@@ -169,22 +148,22 @@ function summaryVal(v: number | null): string {
         <section id="sec-source" class="sec" :class="{ 'sec-focus': focus === 'source' }">
           <div class="sec-title">系统时钟源</div>
           <el-radio-group
-            :model-value="draft.source"
-            @update:model-value="(v: string) => (draft = { ...draft, source: v })"
+            :model-value="config.source"
+            @update:model-value="(v: string) => store.setClock({ source: v })"
           >
             <el-radio-button v-for="s in spec.sources" :key="s.id" :value="s.id">
               {{ s.label }}
             </el-radio-button>
           </el-radio-group>
-          <div v-if="draft.source === 'HXTAL'" class="field">
+          <div v-if="config.source === 'HXTAL'" class="field">
             <span class="field-label">HXTAL 频率</span>
             <el-input-number
-              :model-value="draft.hxtalMhz"
+              :model-value="config.hxtalMhz"
               :min="spec.sources.find((s) => s.hxtal)?.hxtal?.min"
               :max="spec.sources.find((s) => s.hxtal)?.hxtal?.max"
               :step="1"
               size="small"
-              @update:model-value="(v: number | undefined) => v !== undefined && (draft = { ...draft, hxtalMhz: v })"
+              @update:model-value="(v: number | undefined) => v !== undefined && store.setClock({ hxtalMhz: v })"
             />
             <span class="unit">MHz</span>
           </div>
@@ -194,20 +173,20 @@ function summaryVal(v: number | null): string {
         <section
           id="sec-pll"
           class="sec"
-          :class="{ 'sec-focus': focus === 'pll', 'sec-dim': draft.source !== 'PLL' }"
+          :class="{ 'sec-focus': focus === 'pll', 'sec-dim': config.source !== 'PLL' }"
         >
           <div class="sec-title">
             PLL 配置
-            <el-tag v-if="draft.source !== 'PLL'" size="small" type="info">未使用</el-tag>
+            <el-tag v-if="config.source !== 'PLL'" size="small" type="info">未使用</el-tag>
           </div>
-          <template v-if="draft.source === 'PLL'">
+          <template v-if="config.source === 'PLL'">
             <div class="field">
               <span class="field-label">PLL 输入源</span>
               <el-select
-                :model-value="draft.pllSource"
+                :model-value="config.pllSource"
                 size="small"
                 style="width: 180px"
-                @update:model-value="(v: string) => (draft = { ...draft, pllSource: v })"
+                @update:model-value="(v: string) => store.setClock({ pllSource: v })"
               >
                 <el-option
                   v-for="id in spec.pll.sourceOptions"
@@ -221,7 +200,7 @@ function summaryVal(v: number | null): string {
               <span class="field-label">{{ p.label }}</span>
               <el-input-number
                 v-if="p.kind === 'number'"
-                :model-value="draft.pll[p.key]"
+                :model-value="config.pll[p.key]"
                 :min="p.min"
                 :max="p.max"
                 :step="p.step ?? 1"
@@ -230,7 +209,7 @@ function summaryVal(v: number | null): string {
               />
               <el-select
                 v-else
-                :model-value="draft.pll[p.key]"
+                :model-value="config.pll[p.key]"
                 size="small"
                 style="width: 180px"
                 @update:model-value="(v: number) => setPllParam(p.key, v)"
@@ -258,10 +237,10 @@ function summaryVal(v: number | null): string {
         <section id="sec-ahb" class="sec" :class="{ 'sec-focus': focus === 'ahb' }">
           <div class="sec-title">AHB 分频</div>
           <el-select
-            :model-value="draft.ahb"
+            :model-value="config.ahb"
             size="small"
             style="width: 180px"
-            @update:model-value="(v: number) => (draft = { ...draft, ahb: v })"
+            @update:model-value="(v: number) => store.setClock({ ahb: v })"
           >
             <el-option v-for="o in spec.ahb.options" :key="o" :label="`÷${o}`" :value="o" />
           </el-select>
@@ -273,10 +252,10 @@ function summaryVal(v: number | null): string {
         <section id="sec-apb1" class="sec" :class="{ 'sec-focus': focus === 'apb1' }">
           <div class="sec-title">APB1 分频</div>
           <el-select
-            :model-value="draft.apb1"
+            :model-value="config.apb1"
             size="small"
             style="width: 180px"
-            @update:model-value="(v: number) => (draft = { ...draft, apb1: v })"
+            @update:model-value="(v: number) => store.setClock({ apb1: v })"
           >
             <el-option v-for="o in spec.apb1.options" :key="o" :label="`÷${o}`" :value="o" />
           </el-select>
@@ -288,10 +267,10 @@ function summaryVal(v: number | null): string {
         <section id="sec-apb2" class="sec" :class="{ 'sec-focus': focus === 'apb2' }">
           <div class="sec-title">APB2 分频</div>
           <el-select
-            :model-value="draft.apb2"
+            :model-value="config.apb2"
             size="small"
             style="width: 180px"
-            @update:model-value="(v: number) => (draft = { ...draft, apb2: v })"
+            @update:model-value="(v: number) => store.setClock({ apb2: v })"
           >
             <el-option v-for="o in spec.apb2.options" :key="o" :label="`÷${o}`" :value="o" />
           </el-select>
@@ -303,10 +282,10 @@ function summaryVal(v: number | null): string {
         <section id="sec-adc" class="sec" :class="{ 'sec-focus': focus === 'adc' }">
           <div class="sec-title">ADC 时钟</div>
           <el-select
-            :model-value="draft.adc"
+            :model-value="config.adc"
             size="small"
             style="width: 200px"
-            @update:model-value="(v: string) => (draft = { ...draft, adc: v })"
+            @update:model-value="(v: string) => store.setClock({ adc: v })"
           >
             <el-option v-for="o in spec.adc.options" :key="o.id" :label="o.label" :value="o.id" />
           </el-select>
@@ -316,12 +295,7 @@ function summaryVal(v: number | null): string {
         </section>
 
         <section class="sec">
-          <div class="sec-title">
-            校验结果
-            <el-tag :type="validation.ok ? 'success' : 'danger'" size="small">
-              {{ validation.ok ? '合法' : `${validation.errors.length} 项错误` }}
-            </el-tag>
-          </div>
+          <div class="sec-title">校验结果</div>
           <ul v-if="validation.issues.length" class="issue-list">
             <li v-for="(iss, i) in validation.issues" :key="i" :class="iss.severity">
               <el-tag :type="iss.severity === 'error' ? 'danger' : 'warning'" size="small" effect="dark">
@@ -330,38 +304,53 @@ function summaryVal(v: number | null): string {
               <span>{{ iss.message }}</span>
             </li>
           </ul>
-          <div v-else class="hint">当前时钟链路全部合法。</div>
+          <div v-else class="hint">当前时钟链路全部合法，可直接生成代码。</div>
         </section>
       </div>
     </div>
 
-    <template #footer>
-      <div class="dialog-footer">
-        <div class="summary">
-          <span v-for="k in summaryKeys" :key="k" class="summary-item">
-            {{ summaryLabel(k) }}:
-            <b :class="{ over: overLimit(validation.chain[k], summaryMax(k)) }">
-              {{ summaryVal(validation.chain[k]) }}
-            </b>
-          </span>
-        </div>
-        <div class="actions">
-          <el-button @click="reset">恢复默认</el-button>
-          <el-button @click="close">取消</el-button>
-          <el-button type="primary" :disabled="!validation.ok" @click="apply">应用</el-button>
-        </div>
+    <div class="summary-bar">
+      <div class="summary">
+        <span v-for="k in summaryKeys" :key="k" class="summary-item">
+          {{ summaryLabel(k) }}:
+          <b :class="{ over: overLimit(validation.chain[k], summaryMax(k)) }">
+            {{ summaryVal(validation.chain[k]) }}
+          </b>
+        </span>
       </div>
-    </template>
-  </el-dialog>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.clock-dialog {
+.clock-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 920px;
+}
+.view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.view-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.view-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.clock-body {
   display: grid;
-  grid-template-columns: minmax(560px, 1.35fr) minmax(340px, 1fr);
+  grid-template-columns: minmax(520px, 1.35fr) minmax(330px, 1fr);
   gap: 14px;
-  max-height: 68vh;
+  max-height: 66vh;
   overflow: auto;
+  align-items: start;
 }
 .tree-pane {
   border: 1px solid #e5e7eb;
@@ -499,16 +488,15 @@ function summaryVal(v: number | null): string {
   font-size: 12px;
   color: #374151;
 }
-.dialog-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+.summary-bar {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
 }
 .summary {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
   font-size: 12.5px;
   color: #374151;
