@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useProjectStore } from '../stores/project'
 import { validateClock } from '../lib/clock'
 import { buildClockTree, peripheralsOf } from '../lib/clock/tree'
+import { normalizeRotation } from '../lib/packageSvg'
 
 const store = useProjectStore()
 const spec = computed(() => store.deviceData.clockSpec)
@@ -14,6 +15,96 @@ const tree = computed(() =>
   buildClockTree(spec.value, config.value, validation.value.chain, validation.value),
 )
 
+/* ===== 旋转 / 缩放 / 自适应 ===== */
+const stageRef = ref<HTMLElement | null>(null)
+const svgRef = ref<SVGSVGElement | null>(null)
+const autoFit = ref(true)
+const manualFactor = ref(1)
+const autoZoom = ref(1)
+const rotation = ref(0)
+const bboxW = ref(tree.value.width)
+const bboxH = ref(tree.value.height)
+const MIN_ZOOM = 0.4
+const MAX_ZOOM = 2.5
+
+const effectiveZoom = computed(() =>
+  Math.min(
+    MAX_ZOOM,
+    Math.max(MIN_ZOOM, autoFit.value ? autoZoom.value * manualFactor.value : manualFactor.value),
+  ),
+)
+
+// 旋转时钟树时文字反向补偿，保持水平可读
+const textStyle = computed(() => ({ transform: `rotate(${-rotation.value}deg)` }))
+
+let observer: ResizeObserver | null = null
+
+function updateAutoZoom() {
+  const el = stageRef.value
+  if (!el) return
+  const width = el.clientWidth
+  const height = el.clientHeight
+  if (width <= 0 || height <= 0) return
+  let w = tree.value.width
+  let h = tree.value.height
+  if (svgRef.value) {
+    try {
+      const bb = svgRef.value.getBBox()
+      if (bb.width > 0 && bb.height > 0) {
+        w = bb.width
+        h = bb.height
+      }
+    } catch {
+      /* 保持默认尺寸 */
+    }
+  }
+  const rad = (rotation.value * Math.PI) / 180
+  const c = Math.abs(Math.cos(rad))
+  const s = Math.abs(Math.sin(rad))
+  const rotW = w * c + h * s
+  const rotH = w * s + h * c
+  bboxW.value = rotW
+  bboxH.value = rotH
+  autoZoom.value = Math.min(
+    MAX_ZOOM,
+    Math.max(MIN_ZOOM, Math.min(width / rotW, height / rotH)),
+  )
+}
+
+function rotateBy(delta: number) {
+  rotation.value = normalizeRotation(rotation.value + delta)
+  updateAutoZoom()
+}
+
+function changeManual(delta: number) {
+  manualFactor.value = Math.min(2, Math.max(0.5, Math.round((manualFactor.value + delta) * 20) / 20))
+}
+
+function reset() {
+  autoFit.value = true
+  manualFactor.value = 1
+  rotation.value = 0
+  updateAutoZoom()
+}
+
+function onWheel(event: WheelEvent) {
+  const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1
+  manualFactor.value = Math.min(2, Math.max(0.5, manualFactor.value * factor))
+}
+
+onMounted(() => {
+  observer = new ResizeObserver(updateAutoZoom)
+  if (stageRef.value) observer.observe(stageRef.value)
+  window.addEventListener('resize', updateAutoZoom)
+  updateAutoZoom()
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
+  window.removeEventListener('resize', updateAutoZoom)
+})
+
+/* ===== 编辑交互 ===== */
 function nodeSection(id: string): string {
   if (id === 'pll') return 'pll'
   if (id === 'sysclk') return 'sysclk'
@@ -89,65 +180,117 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
         <el-tag :type="validation.ok ? 'success' : 'danger'" size="small">
           {{ validation.ok ? '链路合法' : `${validation.errors.length} 项错误` }}
         </el-tag>
-        <el-button size="small" @click="store.resetClock()">恢复默认</el-button>
+        <el-button size="small" @click="store.resetClock()">恢复默认时钟</el-button>
       </div>
     </div>
 
     <div class="clock-body">
       <div class="tree-pane">
-        <svg :viewBox="`0 0 ${tree.width} ${tree.height}`" class="clock-svg">
-          <defs>
-            <marker
-              id="arrow"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="7"
-              markerHeight="7"
-              orient="auto-start-reverse"
+        <div class="clock-toolbar">
+          <span class="zoom-label">显示比例 {{ Math.round(effectiveZoom * 100) }}%</span>
+          <el-switch v-model="autoFit" size="small" active-text="自动适配" />
+          <el-button-group>
+            <el-button size="small" title="缩小" @click="changeManual(-0.25)">−</el-button>
+            <el-button size="small" title="重置缩放与旋转" @click="reset">重置</el-button>
+            <el-button size="small" title="放大" @click="changeManual(0.25)">＋</el-button>
+          </el-button-group>
+          <span class="zoom-label">旋转 {{ rotation }}°</span>
+          <el-button-group>
+            <el-button size="small" title="逆时针旋转 45°" @click="rotateBy(-45)">⟲45°</el-button>
+            <el-button size="small" title="复位旋转" @click="rotateBy(360 - rotation)">复位</el-button>
+            <el-button size="small" title="顺时针旋转 45°" @click="rotateBy(45)">⟳45°</el-button>
+          </el-button-group>
+          <span class="zoom-label">滚轮缩放</span>
+        </div>
+        <div ref="stageRef" class="clock-stage" @wheel.prevent="onWheel">
+          <div
+            class="clock-rotator"
+            :style="{ width: `${bboxW * effectiveZoom}px`, height: `${bboxH * effectiveZoom}px` }"
+          >
+            <svg
+              ref="svgRef"
+              :width="tree.width * effectiveZoom"
+              :height="tree.height * effectiveZoom"
+              :viewBox="`0 0 ${tree.width} ${tree.height}`"
+              :style="{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }"
+              class="clock-svg"
             >
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
-            </marker>
-          </defs>
-          <g v-for="e in tree.edges" :key="e.id">
-            <line
-              :x1="nodeOf(e.from)!.x + nodeOf(e.from)!.w / 2"
-              :y1="nodeOf(e.from)!.y + nodeOf(e.from)!.h"
-              :x2="nodeOf(e.to)!.x + nodeOf(e.to)!.w / 2"
-              :y2="nodeOf(e.to)!.y"
-              :class="{ 'edge-err': e.error }"
-              class="tree-edge"
-              marker-end="url(#arrow)"
-            />
-            <text
-              v-if="e.label"
-              :x="(nodeOf(e.from)!.x + nodeOf(e.from)!.w / 2 + nodeOf(e.to)!.x + nodeOf(e.to)!.w / 2) / 2"
-              :y="(nodeOf(e.from)!.y + nodeOf(e.from)!.h + nodeOf(e.to)!.y) / 2"
-              class="edge-label"
-              text-anchor="middle"
-            >
-              {{ e.label }}
-            </text>
-          </g>
-          <g v-for="n in tree.nodes" :key="n.id" class="tree-node" @click="onNodeClick(n.id)">
-            <title>{{ n.title }}</title>
-            <rect
-              :x="n.x"
-              :y="n.y"
-              :width="n.w"
-              :height="n.h"
-              rx="8"
-              :class="{
-                'node-active': n.active,
-                'node-error': n.error,
-                'node-idle': !n.active && !n.error,
-                'node-source': n.kind === 'source',
-              }"
-            />
-            <text :x="n.x + n.w / 2" :y="n.y + 23" text-anchor="middle" class="node-label">{{ n.label }}</text>
-            <text :x="n.x + n.w / 2" :y="n.y + 42" text-anchor="middle" class="node-sub">{{ n.sub }}</text>
-          </g>
-        </svg>
+              <defs>
+                <marker
+                  id="arrow"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                </marker>
+              </defs>
+              <g v-for="e in tree.edges" :key="e.id">
+                <line
+                  :x1="nodeOf(e.from)!.x + nodeOf(e.from)!.w / 2"
+                  :y1="nodeOf(e.from)!.y + nodeOf(e.from)!.h"
+                  :x2="nodeOf(e.to)!.x + nodeOf(e.to)!.w / 2"
+                  :y2="nodeOf(e.to)!.y"
+                  :class="{ 'edge-err': e.error }"
+                  class="tree-edge"
+                  marker-end="url(#arrow)"
+                />
+                <text
+                  v-if="e.label"
+                  :x="(nodeOf(e.from)!.x + nodeOf(e.from)!.w / 2 + nodeOf(e.to)!.x + nodeOf(e.to)!.w / 2) / 2"
+                  :y="(nodeOf(e.from)!.y + nodeOf(e.from)!.h + nodeOf(e.to)!.y) / 2"
+                  class="edge-label tree-text"
+                  :style="textStyle"
+                  text-anchor="middle"
+                >
+                  {{ e.label }}
+                </text>
+              </g>
+              <g
+                v-for="n in tree.nodes"
+                :key="n.id"
+                class="tree-node"
+                @click="onNodeClick(n.id)"
+              >
+                <title>{{ n.title }}</title>
+                <rect
+                  :x="n.x"
+                  :y="n.y"
+                  :width="n.w"
+                  :height="n.h"
+                  rx="8"
+                  :class="{
+                    'node-active': n.active,
+                    'node-error': n.error,
+                    'node-idle': !n.active && !n.error,
+                    'node-source': n.kind === 'source',
+                  }"
+                />
+                <text
+                  :x="n.x + n.w / 2"
+                  :y="n.y + 23"
+                  text-anchor="middle"
+                  class="node-label tree-text"
+                  :style="textStyle"
+                >
+                  {{ n.label }}
+                </text>
+                <text
+                  :x="n.x + n.w / 2"
+                  :y="n.y + 42"
+                  text-anchor="middle"
+                  class="node-sub tree-text"
+                  :style="textStyle"
+                >
+                  {{ n.sub }}
+                </text>
+              </g>
+            </svg>
+          </div>
+        </div>
         <div class="tree-tip">点击节点可在右侧编辑对应参数；非法项会以红色标出</div>
       </div>
 
@@ -396,6 +539,8 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   display: flex;
   flex-direction: column;
   gap: 10px;
+  height: calc(100vh - 196px);
+  min-height: 460px;
   min-width: 920px;
 }
 .view-header {
@@ -403,6 +548,7 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex: none;
 }
 .view-title {
   font-weight: 600;
@@ -414,22 +560,58 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   gap: 8px;
 }
 .clock-body {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: minmax(520px, 1.35fr) minmax(330px, 1fr);
+  grid-template-columns: minmax(560px, 1.5fr) minmax(340px, 1fr);
   gap: 14px;
-  max-height: 66vh;
-  overflow: auto;
-  align-items: start;
 }
 .tree-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 8px;
   background: #fafbfc;
+  gap: 6px;
+}
+.clock-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: none;
+}
+.zoom-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+.clock-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 8px;
+}
+.clock-rotator {
+  position: relative;
+  flex: none;
 }
 .clock-svg {
-  width: 100%;
-  height: auto;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center;
+  transition: transform 0.2s ease;
+}
+.tree-text {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.2s ease;
 }
 .tree-edge {
   stroke: #94a3b8;
@@ -476,12 +658,15 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   font-size: 11.5px;
   color: #6b7280;
   text-align: center;
-  padding: 4px 0 2px;
+  flex: none;
 }
 .editor-pane {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 .sec {
   border: 1px solid #e5e7eb;
@@ -490,6 +675,7 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
+  flex: none;
 }
 .sec-focus {
   border-color: #4f46e5;
@@ -594,6 +780,7 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   border-radius: 8px;
   padding: 8px 12px;
   background: #ffffff;
+  flex: none;
 }
 .summary {
   display: flex;

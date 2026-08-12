@@ -97,6 +97,11 @@ function changeManual(delta: number) {
   manualFactor.value = Math.min(2, Math.max(0.5, Math.round((manualFactor.value + delta) * 20) / 20))
 }
 
+function onWheel(event: WheelEvent) {
+  const factor = event.deltaY < 0 ? 1.1 : 1 / 1.1
+  manualFactor.value = Math.min(2, Math.max(0.5, manualFactor.value * factor))
+}
+
 function reset() {
   autoFit.value = true
   manualFactor.value = 1
@@ -305,7 +310,7 @@ function displayLabel(pin: PinDef): string | undefined {
       <el-button size="small" @click="exportSvg">导出 SVG</el-button>
       <el-button size="small" @click="exportPng">导出 PNG</el-button>
     </div>
-    <div class="package-stage">
+    <div class="package-stage" @wheel.prevent="onWheel">
       <div
         class="package-rotator"
         :style="{
