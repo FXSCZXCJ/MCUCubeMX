@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useProjectStore } from '../stores/project'
 import { validateClock } from '../lib/clock'
 import { peripheralsOf } from '../lib/clock/tree'
+import CollapsiblePanel from './CollapsiblePanel.vue'
 
 const store = useProjectStore()
 const spec = computed(() => store.deviceData.clockSpec)
@@ -32,8 +33,12 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
 
 <template>
   <div class="clock-editor">
-    <section id="sec-source" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'source' }">
-      <div class="panel-title">系统时钟源</div>
+    <CollapsiblePanel
+      title="系统时钟源"
+      body-padding
+      class="sec"
+      :class="{ 'sec-focus': store.clockFocus === 'source' }"
+    >
       <el-radio-group
         :model-value="config.source"
         @update:model-value="(v: string) => store.setClock({ source: v })"
@@ -55,17 +60,17 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
         <span class="unit">MHz</span>
       </div>
       <div class="hint">IRC/HXTAL 直连时 SYSCLK 即该源频率；选择 PLL 后进入下方 PLL 配置。</div>
-    </section>
+    </CollapsiblePanel>
 
-    <section
-      id="sec-pll"
-      class="panel sec"
+    <CollapsiblePanel
+      title="PLL 配置"
+      body-padding
+      class="sec"
       :class="{ 'sec-focus': store.clockFocus === 'pll', 'sec-dim': config.source !== 'PLL' }"
     >
-      <div class="panel-title">
-        PLL 配置
+      <template #extra>
         <el-tag v-if="config.source !== 'PLL'" size="small" type="info">未使用</el-tag>
-      </div>
+      </template>
       <template v-if="config.source === 'PLL'">
         <div class="field">
           <span class="field-label">PLL 输入源</span>
@@ -106,10 +111,14 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
         </div>
       </template>
       <div v-else class="hint">系统时钟源不是 PLL，PLL 参数不参与当前链路。</div>
-    </section>
+    </CollapsiblePanel>
 
-    <section id="sec-sysclk" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'sysclk' }">
-      <div class="panel-title">SYSCLK</div>
+    <CollapsiblePanel
+      title="SYSCLK"
+      body-padding
+      class="sec"
+      :class="{ 'sec-focus': store.clockFocus === 'sysclk' }"
+    >
       <div class="freq-line">
         <span
           class="freq-val"
@@ -119,10 +128,14 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
         </span>
       </div>
       <div class="hint">SYSCLK 由时钟源与 PLL 决定；AHB/APB1/APB2/ADC 分频见下方各总线。</div>
-    </section>
+    </CollapsiblePanel>
 
-    <section id="sec-ahb" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'ahb' }">
-      <div class="panel-title">AHB 分频</div>
+    <CollapsiblePanel
+      title="AHB 分频"
+      body-padding
+      class="sec"
+      :class="{ 'sec-focus': store.clockFocus === 'ahb' }"
+    >
       <el-select
         :model-value="config.ahb"
         size="small"
@@ -145,10 +158,14 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
           {{ peri }}
         </el-tag>
       </div>
-    </section>
+    </CollapsiblePanel>
 
-    <section id="sec-apb1" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'apb1' }">
-      <div class="panel-title">APB1 分频</div>
+    <CollapsiblePanel
+      title="APB1 分频"
+      body-padding
+      class="sec"
+      :class="{ 'sec-focus': store.clockFocus === 'apb1' }"
+    >
       <el-select
         :model-value="config.apb1"
         size="small"
@@ -171,10 +188,14 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
           {{ peri }}
         </el-tag>
       </div>
-    </section>
+    </CollapsiblePanel>
 
-    <section id="sec-apb2" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'apb2' }">
-      <div class="panel-title">APB2 分频</div>
+    <CollapsiblePanel
+      title="APB2 分频"
+      body-padding
+      class="sec"
+      :class="{ 'sec-focus': store.clockFocus === 'apb2' }"
+    >
       <el-select
         :model-value="config.apb2"
         size="small"
@@ -197,10 +218,14 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
           {{ peri }}
         </el-tag>
       </div>
-    </section>
+    </CollapsiblePanel>
 
-    <section id="sec-adc" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'adc' }">
-      <div class="panel-title">ADC 时钟</div>
+    <CollapsiblePanel
+      title="ADC 时钟"
+      body-padding
+      class="sec"
+      :class="{ 'sec-focus': store.clockFocus === 'adc' }"
+    >
       <el-select
         :model-value="config.adc"
         size="small"
@@ -223,13 +248,16 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
           {{ peri }}
         </el-tag>
       </div>
-    </section>
+    </CollapsiblePanel>
 
-    <section class="panel sec">
-      <div class="panel-title">
-        可选时钟源的外设
+    <CollapsiblePanel
+      title="可选时钟源的外设"
+      body-padding
+      class="sec"
+    >
+      <template #extra>
         <el-tag size="small" type="info">{{ clockSelectEntries.length }} 个</el-tag>
-      </div>
+      </template>
       <div class="select-list">
         <div v-for="[peri, options] in clockSelectEntries" :key="peri" class="select-row">
           <span class="select-name">{{ peri }}</span>
@@ -241,10 +269,9 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
         </div>
       </div>
       <div class="hint">未列出的外设直接使用所在总线时钟（如 TIMER 跟随 APB 分频）。</div>
-    </section>
+    </CollapsiblePanel>
 
-    <section class="panel sec">
-      <div class="panel-title">校验结果</div>
+    <CollapsiblePanel title="校验结果" body-padding class="sec">
       <ul v-if="validation.issues.length" class="issue-list">
         <li v-for="(iss, i) in validation.issues" :key="i" :class="iss.severity">
           <el-tag :type="iss.severity === 'error' ? 'danger' : 'warning'" size="small" effect="dark">
@@ -254,7 +281,7 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
         </li>
       </ul>
       <div v-else class="hint">当前时钟链路全部合法，可直接生成代码。</div>
-    </section>
+    </CollapsiblePanel>
   </div>
 </template>
 
@@ -263,24 +290,6 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-.panel {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-  flex: none;
-}
-.sec {
-  padding: 12px;
-}
-.panel-title {
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .sec-focus {
   border-color: #4f46e5 !important;

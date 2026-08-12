@@ -6,7 +6,6 @@ const store = useProjectStore()
 
 <template>
   <div class="conflicts-panel">
-    <div class="panel-title">检查结果</div>
     <el-empty
       v-if="store.conflicts.length === 0"
       description="无冲突"
@@ -26,10 +25,6 @@ const store = useProjectStore()
 <style scoped>
 .conflicts-panel {
   padding: 10px 12px;
-}
-.panel-title {
-  font-weight: 600;
-  margin-bottom: 6px;
 }
 .conflict-list {
   list-style: none;

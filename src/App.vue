@@ -8,6 +8,7 @@ import ConflictsPanel from './components/ConflictsPanel.vue'
 import PeripheralUsagePanel from './components/PeripheralUsagePanel.vue'
 import ExtiAllocationPanel from './components/ExtiAllocationPanel.vue'
 import GroupsPanel from './components/GroupsPanel.vue'
+import CollapsiblePanel from './components/CollapsiblePanel.vue'
 import CodegenDialog from './components/CodegenDialog.vue'
 import ClockTreeView from './components/ClockTreeView.vue'
 import ClockEditorPanel from './components/ClockEditorPanel.vue'
@@ -141,33 +142,26 @@ async function clearAll() {
           <PackageView />
         </section>
         <aside class="config-pane">
-          <div class="panel">
-            <div class="panel-title">
-              引脚列表 <span class="panel-count">{{ store.assignedCount }}/{{ 64 }}</span>
-            </div>
+          <CollapsiblePanel title="引脚配置">
+            <PinConfigPanel />
+          </CollapsiblePanel>
+          <CollapsiblePanel title="引脚列表" :badge="`${store.assignedCount}/${64}`">
             <div class="table-wrap">
               <PinTable />
             </div>
-          </div>
-          <div class="panel">
-            <div class="panel-title">外设使用情况</div>
+          </CollapsiblePanel>
+          <CollapsiblePanel title="外设使用情况">
             <PeripheralUsagePanel />
-          </div>
-          <div class="panel">
-            <div class="panel-title">中断线分配</div>
+          </CollapsiblePanel>
+          <CollapsiblePanel title="中断线分配">
             <ExtiAllocationPanel />
-          </div>
-          <div class="panel">
-            <div class="panel-title">引脚分组</div>
+          </CollapsiblePanel>
+          <CollapsiblePanel title="引脚分组">
             <GroupsPanel />
-          </div>
-          <div class="panel">
-            <div class="panel-title">引脚配置</div>
-            <PinConfigPanel />
-          </div>
-          <div class="panel">
+          </CollapsiblePanel>
+          <CollapsiblePanel title="检查结果">
             <ConflictsPanel />
-          </div>
+          </CollapsiblePanel>
         </aside>
       </template>
       <template v-else>
@@ -254,26 +248,6 @@ async function clearAll() {
   flex-direction: column;
   gap: 12px;
   padding-right: 2px;
-}
-.panel {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-  flex: none;
-}
-.panel-title {
-  font-weight: 600;
-  padding: 9px 12px;
-  border-bottom: 1px solid #f0f1f3;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.panel-count {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 400;
 }
 .table-wrap {
   height: 260px;
