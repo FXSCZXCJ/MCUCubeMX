@@ -9,6 +9,7 @@ import PeripheralUsagePanel from './components/PeripheralUsagePanel.vue'
 import GroupsPanel from './components/GroupsPanel.vue'
 import CodegenDialog from './components/CodegenDialog.vue'
 import ClockTreeView from './components/ClockTreeView.vue'
+import ClockEditorPanel from './components/ClockEditorPanel.vue'
 import JlcBridgePanel from './components/JlcBridgePanel.vue'
 import { useProjectStore } from './stores/project'
 import { downloadBlob } from './lib/codegen'
@@ -133,12 +134,12 @@ async function clearAll() {
       </div>
     </header>
 
-    <main class="app-main" :class="{ 'app-main-clock': viewMode === 'clock' }">
+    <main class="app-main">
       <template v-if="viewMode === 'gpio'">
-        <section class="left">
+        <section class="svg-pane">
           <PackageView />
         </section>
-        <section class="right">
+        <aside class="config-pane">
           <div class="panel">
             <div class="panel-title">
               引脚列表 <span class="panel-count">{{ store.assignedCount }}/{{ 64 }}</span>
@@ -162,13 +163,16 @@ async function clearAll() {
           <div class="panel">
             <ConflictsPanel />
           </div>
-        </section>
+        </aside>
       </template>
-      <section v-else class="clock-page">
-        <div class="clock-page-inner">
+      <template v-else>
+        <section class="svg-pane">
           <ClockTreeView />
-        </div>
-      </section>
+        </section>
+        <aside class="config-pane">
+          <ClockEditorPanel />
+        </aside>
+      </template>
     </main>
 
     <CodegenDialog v-model="codegenVisible" />
@@ -193,9 +197,10 @@ async function clearAll() {
   justify-content: space-between;
   gap: 16px;
   padding: 10px 18px;
+  height: 58px;
+  flex: none;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
-  flex-wrap: wrap;
 }
 .brand {
   display: flex;
@@ -225,37 +230,32 @@ async function clearAll() {
   width: 140px;
 }
 .app-main {
+  height: calc(100vh - 58px);
   display: grid;
   grid-template-columns: minmax(560px, 1.5fr) minmax(360px, 0.9fr);
   gap: 14px;
-  padding: 14px 18px;
-  overflow: auto;
-  align-items: start;
+  padding: 12px 18px;
+  overflow: hidden;
 }
-.app-main-clock {
-  display: block;
-}
-.left {
-  position: sticky;
-  top: 0;
+.svg-pane {
   min-width: 0;
+  height: 100%;
+  overflow: hidden;
 }
-.clock-page {
-  overflow-x: auto;
-}
-.clock-page-inner {
-  min-width: 920px;
-}
-.right {
+.config-pane {
+  height: 100%;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-right: 2px;
 }
 .panel {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   overflow: hidden;
+  flex: none;
 }
 .panel-title {
   font-weight: 600;

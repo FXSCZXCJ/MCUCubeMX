@@ -60,4 +60,12 @@ describe('时钟树 store', () => {
     store.resetClock()
     expect(store.clock).toEqual(defaultClock(store.deviceData.clockSpec))
   })
+
+  it('setClockFocus 记录时钟树聚焦编辑区', () => {
+    const store = useProjectStore()
+    store.setClockFocus('apb1')
+    expect(store.clockFocus).toBe('apb1')
+    store.setClockFocus(null)
+    expect(store.clockFocus).toBeNull()
+  })
 })

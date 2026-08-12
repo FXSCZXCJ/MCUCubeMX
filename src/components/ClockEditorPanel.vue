@@ -1,0 +1,375 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useProjectStore } from '../stores/project'
+import { validateClock } from '../lib/clock'
+import { peripheralsOf } from '../lib/clock/tree'
+
+const store = useProjectStore()
+const spec = computed(() => store.deviceData.clockSpec)
+const config = computed(() => store.clock)
+const validation = computed(() => validateClock(spec.value, config.value))
+
+function setPllParam(key: string, value: number | undefined) {
+  if (value === undefined) return
+  store.setClock({ pll: { ...config.value.pll, [key]: value } })
+}
+
+function fmtFreq(v: number | null, max: number): string {
+  const s = v === null || !Number.isFinite(v) ? '无效' : `${Math.round(v * 1000) / 1000} MHz`
+  return `${s} / 上限 ${max} MHz`
+}
+
+function overLimit(v: number | null, max: number): boolean {
+  return v !== null && Number.isFinite(v) && v > max
+}
+
+function peripheralsOfNode(id: string): string[] {
+  return peripheralsOf(spec.value, id)
+}
+
+const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect ?? {}))
+</script>
+
+<template>
+  <div class="clock-editor">
+    <section id="sec-source" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'source' }">
+      <div class="panel-title">系统时钟源</div>
+      <el-radio-group
+        :model-value="config.source"
+        @update:model-value="(v: string) => store.setClock({ source: v })"
+      >
+        <el-radio-button v-for="s in spec.sources" :key="s.id" :value="s.id">
+          {{ s.label }}
+        </el-radio-button>
+      </el-radio-group>
+      <div v-if="config.source === 'HXTAL'" class="field">
+        <span class="field-label">HXTAL 频率</span>
+        <el-input-number
+          :model-value="config.hxtalMhz"
+          :min="spec.sources.find((s) => s.hxtal)?.hxtal?.min"
+          :max="spec.sources.find((s) => s.hxtal)?.hxtal?.max"
+          :step="1"
+          size="small"
+          @update:model-value="(v: number | undefined) => v !== undefined && store.setClock({ hxtalMhz: v })"
+        />
+        <span class="unit">MHz</span>
+      </div>
+      <div class="hint">IRC/HXTAL 直连时 SYSCLK 即该源频率；选择 PLL 后进入下方 PLL 配置。</div>
+    </section>
+
+    <section
+      id="sec-pll"
+      class="panel sec"
+      :class="{ 'sec-focus': store.clockFocus === 'pll', 'sec-dim': config.source !== 'PLL' }"
+    >
+      <div class="panel-title">
+        PLL 配置
+        <el-tag v-if="config.source !== 'PLL'" size="small" type="info">未使用</el-tag>
+      </div>
+      <template v-if="config.source === 'PLL'">
+        <div class="field">
+          <span class="field-label">PLL 输入源</span>
+          <el-select
+            :model-value="config.pllSource"
+            size="small"
+            style="width: 180px"
+            @update:model-value="(v: string) => store.setClock({ pllSource: v })"
+          >
+            <el-option
+              v-for="id in spec.pll.sourceOptions"
+              :key="id"
+              :label="spec.sources.find((s) => s.id === id)?.label ?? id"
+              :value="id"
+            />
+          </el-select>
+        </div>
+        <div v-for="p in spec.pll.params" :key="p.key" class="field">
+          <span class="field-label">{{ p.label }}</span>
+          <el-input-number
+            v-if="p.kind === 'number'"
+            :model-value="config.pll[p.key]"
+            :min="p.min"
+            :max="p.max"
+            :step="p.step ?? 1"
+            size="small"
+            @update:model-value="(v: number | undefined) => setPllParam(p.key, v)"
+          />
+          <el-select
+            v-else
+            :model-value="config.pll[p.key]"
+            size="small"
+            style="width: 180px"
+            @update:model-value="(v: number) => setPllParam(p.key, v)"
+          >
+            <el-option v-for="o in p.options" :key="o" :label="String(o)" :value="o" />
+          </el-select>
+        </div>
+      </template>
+      <div v-else class="hint">系统时钟源不是 PLL，PLL 参数不参与当前链路。</div>
+    </section>
+
+    <section id="sec-sysclk" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'sysclk' }">
+      <div class="panel-title">SYSCLK</div>
+      <div class="freq-line">
+        <span
+          class="freq-val"
+          :class="{ over: overLimit(validation.chain.sysclkMhz, spec.sysclkMaxMhz) }"
+        >
+          {{ fmtFreq(validation.chain.sysclkMhz, spec.sysclkMaxMhz) }}
+        </span>
+      </div>
+      <div class="hint">SYSCLK 由时钟源与 PLL 决定；AHB/APB1/APB2/ADC 分频见下方各总线。</div>
+    </section>
+
+    <section id="sec-ahb" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'ahb' }">
+      <div class="panel-title">AHB 分频</div>
+      <el-select
+        :model-value="config.ahb"
+        size="small"
+        style="width: 180px"
+        @update:model-value="(v: number) => store.setClock({ ahb: v })"
+      >
+        <el-option v-for="o in spec.ahb.options" :key="o" :label="`÷${o}`" :value="o" />
+      </el-select>
+      <span class="freq-val" :class="{ over: overLimit(validation.chain.ahbMhz, spec.ahb.maxMhz) }">
+        {{ fmtFreq(validation.chain.ahbMhz, spec.ahb.maxMhz) }}
+      </span>
+      <div class="peri-list">
+        <el-tag
+          v-for="peri in peripheralsOfNode('ahb')"
+          :key="peri"
+          size="small"
+          type="info"
+          effect="plain"
+        >
+          {{ peri }}
+        </el-tag>
+      </div>
+    </section>
+
+    <section id="sec-apb1" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'apb1' }">
+      <div class="panel-title">APB1 分频</div>
+      <el-select
+        :model-value="config.apb1"
+        size="small"
+        style="width: 180px"
+        @update:model-value="(v: number) => store.setClock({ apb1: v })"
+      >
+        <el-option v-for="o in spec.apb1.options" :key="o" :label="`÷${o}`" :value="o" />
+      </el-select>
+      <span class="freq-val" :class="{ over: overLimit(validation.chain.apb1Mhz, spec.apb1.maxMhz) }">
+        {{ fmtFreq(validation.chain.apb1Mhz, spec.apb1.maxMhz) }}
+      </span>
+      <div class="peri-list">
+        <el-tag
+          v-for="peri in peripheralsOfNode('apb1')"
+          :key="peri"
+          size="small"
+          type="info"
+          effect="plain"
+        >
+          {{ peri }}
+        </el-tag>
+      </div>
+    </section>
+
+    <section id="sec-apb2" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'apb2' }">
+      <div class="panel-title">APB2 分频</div>
+      <el-select
+        :model-value="config.apb2"
+        size="small"
+        style="width: 180px"
+        @update:model-value="(v: number) => store.setClock({ apb2: v })"
+      >
+        <el-option v-for="o in spec.apb2.options" :key="o" :label="`÷${o}`" :value="o" />
+      </el-select>
+      <span class="freq-val" :class="{ over: overLimit(validation.chain.apb2Mhz, spec.apb2.maxMhz) }">
+        {{ fmtFreq(validation.chain.apb2Mhz, spec.apb2.maxMhz) }}
+      </span>
+      <div class="peri-list">
+        <el-tag
+          v-for="peri in peripheralsOfNode('apb2')"
+          :key="peri"
+          size="small"
+          type="info"
+          effect="plain"
+        >
+          {{ peri }}
+        </el-tag>
+      </div>
+    </section>
+
+    <section id="sec-adc" class="panel sec" :class="{ 'sec-focus': store.clockFocus === 'adc' }">
+      <div class="panel-title">ADC 时钟</div>
+      <el-select
+        :model-value="config.adc"
+        size="small"
+        style="width: 200px"
+        @update:model-value="(v: string) => store.setClock({ adc: v })"
+      >
+        <el-option v-for="o in spec.adc.options" :key="o.id" :label="o.label" :value="o.id" />
+      </el-select>
+      <span class="freq-val" :class="{ over: overLimit(validation.chain.adcMhz, spec.adc.maxMhz) }">
+        {{ fmtFreq(validation.chain.adcMhz, spec.adc.maxMhz) }}
+      </span>
+      <div class="peri-list">
+        <el-tag
+          v-for="peri in peripheralsOfNode('adc')"
+          :key="peri"
+          size="small"
+          type="info"
+          effect="plain"
+        >
+          {{ peri }}
+        </el-tag>
+      </div>
+    </section>
+
+    <section class="panel sec">
+      <div class="panel-title">
+        可选时钟源的外设
+        <el-tag size="small" type="info">{{ clockSelectEntries.length }} 个</el-tag>
+      </div>
+      <div class="select-list">
+        <div v-for="[peri, options] in clockSelectEntries" :key="peri" class="select-row">
+          <span class="select-name">{{ peri }}</span>
+          <span class="select-opts">
+            <el-tag v-for="opt in options" :key="opt" size="small" type="warning" effect="plain">
+              {{ opt }}
+            </el-tag>
+          </span>
+        </div>
+      </div>
+      <div class="hint">未列出的外设直接使用所在总线时钟（如 TIMER 跟随 APB 分频）。</div>
+    </section>
+
+    <section class="panel sec">
+      <div class="panel-title">校验结果</div>
+      <ul v-if="validation.issues.length" class="issue-list">
+        <li v-for="(iss, i) in validation.issues" :key="i" :class="iss.severity">
+          <el-tag :type="iss.severity === 'error' ? 'danger' : 'warning'" size="small" effect="dark">
+            {{ iss.severity === 'error' ? '错误' : '警告' }}
+          </el-tag>
+          <span>{{ iss.message }}</span>
+        </li>
+      </ul>
+      <div v-else class="hint">当前时钟链路全部合法，可直接生成代码。</div>
+    </section>
+  </div>
+</template>
+
+<style scoped>
+.clock-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  flex: none;
+}
+.sec {
+  padding: 12px;
+}
+.panel-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sec-focus {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.12);
+}
+.sec-dim {
+  opacity: 0.6;
+}
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.field-label {
+  width: 110px;
+  font-size: 12.5px;
+  color: #374151;
+  flex-shrink: 0;
+}
+.unit {
+  font-size: 12px;
+  color: #6b7280;
+}
+.freq-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.freq-val {
+  font-size: 12.5px;
+  color: #374151;
+  margin-left: 8px;
+}
+.peri-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+.peri-list .el-tag {
+  margin-right: 0;
+}
+.select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.select-name {
+  width: 72px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1f2937;
+  flex-shrink: 0;
+}
+.select-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.over {
+  color: #dc2626;
+  font-weight: 700;
+}
+.hint {
+  font-size: 11.5px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+.issue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.issue-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #374151;
+}
+</style>

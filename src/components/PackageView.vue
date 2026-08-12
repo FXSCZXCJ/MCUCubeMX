@@ -494,7 +494,8 @@ function displayLabel(pin: PinDef): string | undefined {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  height: calc(100vh - 196px);
+  height: 100%;
+  min-height: 0;
   width: 100%;
   user-select: none;
   -webkit-user-select: none;

@@ -35,6 +35,8 @@ export const useProjectStore = defineStore('project', {
     assignments: {} as Record<string, PinAssignment>,
     groups: [] as PinGroup[],
     selectedPin: null as string | null,
+    /** 时钟树中当前聚焦的编辑区（source/pll/sysclk/ahb/apb1/apb2/adc） */
+    clockFocus: null as string | null,
     unlocked: [] as string[],
     clock: defaultClock(getClockSpec('GD32L233RCT6')) as ClockConfig,
   }),
@@ -115,6 +117,9 @@ export const useProjectStore = defineStore('project', {
     setClock(patch: Partial<ClockConfig>) {
       const spec = getClockSpec(this.deviceId)
       this.clock = mergeClockConfig(spec, { ...this.clock, ...patch, pll: { ...this.clock.pll, ...(patch.pll ?? {}) } })
+    },
+    setClockFocus(id: string | null) {
+      this.clockFocus = id
     },
     resetClock() {
       this.clock = defaultClock(getClockSpec(this.deviceId))
