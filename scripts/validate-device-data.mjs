@@ -258,6 +258,58 @@ function validateClockData(clock, fail) {
       }
     }
   }
+  if (clock.timerDomains !== undefined) {
+    if (!Array.isArray(clock.timerDomains) || clock.timerDomains.length === 0) {
+      fail('clock.timerDomains 不能为空')
+    } else {
+      for (const d of clock.timerDomains) {
+        if (
+          !d.id ||
+          !['apb1', 'apb2'].includes(d.bus) ||
+          !Array.isArray(d.peripherals) ||
+          d.peripherals.length === 0
+        ) {
+          fail(`clock.timerDomains 条目非法: ${JSON.stringify(d)}`)
+        }
+      }
+    }
+  }
+  const lp = clock.lowPower
+  if (lp) {
+    if (!(pos(lp.lxtalMhz) && pos(lp.irc32kMhz))) {
+      fail('clock.lowPower lxtal/irc32k 频率应为正数')
+    }
+    if (!lp.rtc?.sources?.length || !lp.rtc.default || !Array.isArray(lp.rtc.peripherals)) {
+      fail('clock.lowPower.rtc 配置不完整')
+    } else {
+      for (const s of lp.rtc.sources) {
+        if (!s.key || !s.label || !s.macro) fail(`clock.lowPower.rtc.sources 条目非法: ${JSON.stringify(s)}`)
+        if (s.freqMhz === undefined && !s.divHxtal) {
+          fail(`clock.lowPower.rtc.sources.${s.key} 需要 freqMhz 或 divHxtal`)
+        }
+      }
+      if (!lp.rtc.sources.some((s) => s.key === lp.rtc.default)) {
+        fail('clock.lowPower.rtc.default 不在 sources 中')
+      }
+    }
+    if (!lp.fwdgt?.source || !Array.isArray(lp.fwdgt.peripherals)) {
+      fail('clock.lowPower.fwdgt 配置不完整')
+    }
+  }
+  const usb = clock.usb48
+  if (usb) {
+    if (!usb.label || !usb.default || !Array.isArray(usb.sources) || usb.sources.length === 0) {
+      fail('clock.usb48 配置不完整')
+    } else {
+      for (const s of usb.sources) {
+        if (!s.key || !s.label || !s.macro || !s.api) {
+          fail(`clock.usb48.sources 条目非法: ${JSON.stringify(s)}`)
+        }
+        if (s.extraApi && !s.extraMacro) fail(`clock.usb48.sources.${s.key} 需要 extraMacro`)
+      }
+      if (!usb.sources.some((s) => s.key === usb.default)) fail('clock.usb48.default 不在 sources 中')
+    }
+  }
   const cg = clock.codegen
   if (!cg) return fail('clock.codegen 缺失')
   for (const s of clock.sources ?? []) {

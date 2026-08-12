@@ -102,3 +102,39 @@ describe('project.json 往返', () => {
     }
   })
 })
+
+describe('RTC / USB 48MHz 代码生成', () => {
+  it('L233：clock.c 生成 RTC 与 USBD 时钟源配置', () => {
+    const config = loadFixture('sample-project.json')
+    const c = file(generateProject(config, getDeviceData(config.device)), 'clock.c')
+    expect(c).toContain('rcu_rtc_clock_config(RCU_RTCSRC_LXTAL);')
+    expect(c).toContain('rcu_usbd_clock_config(RCU_USBDSRC_IRC48M);')
+  })
+
+  it('F427：clock.c 生成 RTC 与 CK48M 配置（PLL48M 时含 rcu_pll48m_clock_config）', () => {
+    const config: ProjectConfig = {
+      ...loadFixture('sample-project-f427.json'),
+      clock: {
+        ...loadFixture('sample-project-f427.json').clock!,
+        usbSource: 'PLL48M',
+        pll: { psc: 25, n: 384, p: 2, q: 8 },
+      },
+    }
+    const c = file(generateProject(config, getDeviceData(config.device)), 'clock.c')
+    expect(c).toContain('rcu_rtc_clock_config(RCU_RTCSRC_LXTAL);')
+    expect(c).toContain('rcu_pll48m_clock_config(RCU_PLL48MSRC_PLLQ);')
+    expect(c).toContain('rcu_ck48m_clock_config(RCU_CK48MSRC_PLL48M);')
+  })
+
+  it('旧配置（无 rtcSource/usbSource）不生成 RTC/USB 代码', () => {
+    const config: ProjectConfig = {
+      ...loadFixture('sample-project.json'),
+      clock: { ...loadFixture('sample-project.json').clock! },
+    }
+    delete (config.clock as unknown as Record<string, unknown>).rtcSource
+    delete (config.clock as unknown as Record<string, unknown>).usbSource
+    const c = file(generateProject(config, getDeviceData(config.device)), 'clock.c')
+    expect(c).not.toContain('rcu_rtc_clock_config')
+    expect(c).not.toContain('rcu_usbd_clock_config')
+  })
+})

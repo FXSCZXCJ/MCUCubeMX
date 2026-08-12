@@ -98,6 +98,8 @@ interface ClockContext {
   apb1Mhz: number
   apb2Mhz: number
   adcMhz: number
+  rtcCall: string | null
+  usbCalls: string[]
 }
 
 interface UsartOut {
@@ -177,6 +179,20 @@ function buildClockContext(config: ProjectConfig, deviceData: DeviceData): Clock
   const oscOnMacro = usePll
     ? spec.codegen.oscEnum[clock.pllSource]
     : spec.codegen.oscEnum[clock.source]
+  // RTC / USB 48MHz 时钟源（仅在显式配置时生成）
+  let rtcCall: string | null = null
+  if (clock.rtcSource) {
+    const src = spec.lowPower?.rtc.sources.find((s) => s.key === clock.rtcSource)
+    if (src) rtcCall = `rcu_rtc_clock_config(${src.macro})`
+  }
+  const usbCalls: string[] = []
+  if (clock.usbSource) {
+    const src = spec.usb48?.sources.find((s) => s.key === clock.usbSource)
+    if (src) {
+      if (src.extraApi && src.extraMacro) usbCalls.push(`${src.extraApi}(${src.extraMacro})`)
+      usbCalls.push(`${src.api}(${src.macro})`)
+    }
+  }
 
   return {
     device: config.device,
@@ -203,6 +219,8 @@ function buildClockContext(config: ProjectConfig, deviceData: DeviceData): Clock
     apb1Mhz: round(chain.apb1Mhz),
     apb2Mhz: round(chain.apb2Mhz),
     adcMhz: round(chain.adcMhz),
+    rtcCall,
+    usbCalls,
   }
 }
 

@@ -125,6 +125,18 @@ export const useProjectStore = defineStore('project', {
     setClockFocus(id: string | null) {
       this.clockFocus = id
     },
+    setRtcSource(src: string | null) {
+      const next = { ...this.clock }
+      if (src === null) delete next.rtcSource
+      else next.rtcSource = src
+      this.clock = next
+    },
+    setUsbSource(src: string | null) {
+      const next = { ...this.clock }
+      if (src === null) delete next.usbSource
+      else next.usbSource = src
+      this.clock = next
+    },
     setPeripheral(id: string, patch: Partial<PeripheralConfig>) {
       const spec = getDeviceData(this.deviceId).peripheralSpec
       const exists =

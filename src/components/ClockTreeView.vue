@@ -171,6 +171,11 @@ function nodeSection(id: string): string {
   if (id === 'apb1') return 'apb1'
   if (id === 'apb2') return 'apb2'
   if (id === 'adc') return 'adc'
+  if (id === 'APB1_TIMER' || id === 'apb1_timer') return 'apb1'
+  if (id === 'APB2_TIMER' || id === 'apb2_timer') return 'apb2'
+  if (id === 'rtc' || id === 'fwdgt' || id === 'LXTAL' || id === 'IRC32K') return 'rtc'
+  if (id === 'usb48') return 'usb48'
+  if (id === 'systick') return 'sysclk'
   return 'source'
 }
 
@@ -178,6 +183,10 @@ function onNodeClick(id: string) {
   // 点击 PLL 节点且当前未启用 PLL 时，先切换系统源为 PLL
   if (id === 'pll' && config.value.source !== 'PLL') {
     store.setClock({ source: 'PLL' })
+  }
+  // 点击低功耗源节点 → 选择 RTC 时钟源
+  if (id === 'LXTAL' || id === 'IRC32K') {
+    store.setClock({ rtcSource: id })
   }
   store.setClockFocus(nodeSection(id))
 }
@@ -313,6 +322,8 @@ function overLimit(v: number | null, max: number): boolean {
                 'node-error': n.error,
                 'node-idle': !n.active && !n.error,
                 'node-source': n.kind === 'source',
+                'node-timer': n.kind === 'timer' && !n.error,
+                'node-aux': n.kind === 'aux' && !n.error,
               }"
             />
             <text
@@ -473,6 +484,14 @@ function overLimit(v: number | null, max: number): boolean {
 .node-active {
   fill: #e0e7ff;
   stroke: #4f46e5;
+}
+.node-timer {
+  fill: #eff6ff;
+  stroke: #3b82f6;
+}
+.node-aux {
+  fill: #ecfdf5;
+  stroke: #10b981;
 }
 .node-error {
   fill: #fee2e2;

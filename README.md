@@ -43,6 +43,9 @@
   时钟模式为全屏**图形化 SVG 时钟树**（源 → PLL → SYSCLK → AHB → APB1/APB2 → ADC）
 - **三段式统一布局**：固定顶栏 + 左侧 SVG 窗口（占满剩余高度）+ 右侧可滚动配置列表，
   GPIO 与时钟模式共用同一布局与卡片样式
+- 时钟树覆盖**完整时钟域**：TIMER 域（APB 分频>1 时 ×2）、RTC/FWDGT（LXTAL/IRC32K）、
+  USB 48MHz（IRC48M/PLL，含 48MHz 约束校验）、SysTick=HCLK/8、CK_OUT 标注；
+  **PLL 自动解算**：输入目标 SYSCLK 自动枚举合法 PLL 组合并一键应用
 - 右侧配置栏目**全部可折叠**（共享 `CollapsiblePanel` 组件，标题栏点击展开/收起）；
   GPIO 模式「引脚配置」置顶显示
 - 顶栏「折叠左栏」可整体收起左侧 SVG 窗口（封装图/时钟树），右侧配置列表占满整行；

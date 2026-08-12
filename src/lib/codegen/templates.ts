@@ -193,6 +193,14 @@ void <%= prefix %>Clock_Init(void)
     /* NVIC 优先级分组 */
     nvic_priority_group_set(<%= nvicPriorityGroupMacro %>);
 <% } -%>
+<% if (rtcCall) { -%>
+    /* RTC 时钟源 */
+    <%= rtcCall %>;
+
+<% } -%>
+<% usbCalls.forEach(function(call){ -%>
+    <%= call %>;
+<% }); -%>
 
     /* USER CODE BEGIN ClockInit */
     /* USER CODE END ClockInit */

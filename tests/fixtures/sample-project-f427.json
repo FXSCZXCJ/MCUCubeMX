@@ -60,7 +60,9 @@
     "ahb": 1,
     "apb1": 4,
     "apb2": 2,
-    "adc": "PCLK2_DIV4"
+    "adc": "PCLK2_DIV4",
+    "rtcSource": "LXTAL",
+    "usbSource": "IRC48M"
   },
   "peripherals": {
     "USART0": {

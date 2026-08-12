@@ -68,4 +68,41 @@ describe('时钟树 store', () => {
     store.setClockFocus(null)
     expect(store.clockFocus).toBeNull()
   })
+
+  it('setRtcSource / setUsbSource 与清除', () => {
+    const store = useProjectStore()
+    store.setRtcSource('IRC32K')
+    store.setUsbSource('PLL')
+    expect(store.clock.rtcSource).toBe('IRC32K')
+    expect(store.clock.usbSource).toBe('PLL')
+    store.setRtcSource(null)
+    store.setUsbSource(null)
+    expect(store.clock.rtcSource).toBeUndefined()
+    expect(store.clock.usbSource).toBeUndefined()
+  })
+
+  it('loadConfig 恢复 rtcSource/usbSource', () => {
+    const store = useProjectStore()
+    const config: ProjectConfig = {
+      version: 1,
+      device: 'GD32L233RCT6',
+      pins: [],
+      naming: { prefix: 'MX_' },
+      clock: {
+        source: 'PLL',
+        hxtalMhz: 8,
+        pllSource: 'IRC16M',
+        pll: { mul: 4 },
+        ahb: 1,
+        apb1: 2,
+        apb2: 1,
+        adc: 'APB2_DIV4',
+        rtcSource: 'LXTAL',
+        usbSource: 'IRC48M',
+      },
+    }
+    store.loadConfig(config)
+    expect(store.clock.rtcSource).toBe('LXTAL')
+    expect(store.clock.usbSource).toBe('IRC48M')
+  })
 })

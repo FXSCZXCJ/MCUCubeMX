@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import { useProjectStore } from '../stores/project'
-import { validateClock } from '../lib/clock'
+import { solvePll, validateClock } from '../lib/clock'
+import type { PllSolution } from '../lib/clock'
 import { peripheralsOf } from '../lib/clock/tree'
 import CollapsiblePanel from './CollapsiblePanel.vue'
 
@@ -29,6 +31,37 @@ function peripheralsOfNode(id: string): string[] {
 }
 
 const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect ?? {}))
+
+/* ===== RTC / USB / PLL 自动解算 ===== */
+const rtcSources = computed(() => spec.value.lowPower?.rtc.sources ?? [])
+const usbSources = computed(() => spec.value.usb48?.sources ?? [])
+const pllTarget = ref(64)
+const pllSource = ref<string | null>(null)
+const pllSolutions = ref<PllSolution[] | null>(null)
+const pllSolveError = ref('')
+
+function runSolve() {
+  const result = solvePll(spec.value, pllTarget.value, pllSource.value ?? undefined)
+  pllSolutions.value = result.solutions
+  pllSolveError.value = result.error ?? ''
+}
+
+function describeSolution(sol: PllSolution): string {
+  return Object.entries(sol.params)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(' / ')
+}
+
+function applySolution(sol: PllSolution) {
+  store.setClock({
+    source: 'PLL',
+    pllSource: sol.pllSource,
+    pll: { ...config.value.pll, ...sol.params },
+  })
+  ElMessage.success(
+    `已应用 PLL：${describeSolution(sol)}（SYSCLK ${Math.round(sol.pllOutMhz * 1000) / 1000}MHz）`,
+  )
+}
 </script>
 
 <template>
@@ -251,6 +284,109 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
     </CollapsiblePanel>
 
     <CollapsiblePanel
+      v-if="spec.lowPower"
+      title="RTC / 低功耗时钟"
+      body-padding
+      class="sec"
+      :class="{ 'sec-focus': store.clockFocus === 'rtc' }"
+    >
+      <div class="field">
+        <span class="field-label">RTC 时钟源</span>
+        <el-select
+          :model-value="config.rtcSource ?? null"
+          size="small"
+          style="width: 220px"
+          @update:model-value="(v: string | null) => store.setRtcSource(v)"
+        >
+          <el-option label="未配置" :value="null" />
+          <el-option v-for="s in rtcSources" :key="s.key" :label="s.label" :value="s.key" />
+        </el-select>
+      </div>
+      <div class="freq-line">
+        <span class="freq-val">RTC 频率：{{ fmtFreq(validation.chain.rtcMhz, 0.1) }}</span>
+      </div>
+      <div class="hint">FWDGT 固定使用 IRC32K；RTC 挂载：{{ peripheralsOfNode('rtc').join('、') || '—' }}</div>
+    </CollapsiblePanel>
+
+    <CollapsiblePanel
+      v-if="spec.usb48"
+      title="USB 48MHz"
+      body-padding
+      class="sec"
+      :class="{ 'sec-focus': store.clockFocus === 'usb48' }"
+    >
+      <div class="field">
+        <span class="field-label">时钟源</span>
+        <el-select
+          :model-value="config.usbSource ?? null"
+          size="small"
+          style="width: 220px"
+          @update:model-value="(v: string | null) => store.setUsbSource(v)"
+        >
+          <el-option label="未配置" :value="null" />
+          <el-option v-for="s in usbSources" :key="s.key" :label="s.label" :value="s.key" />
+        </el-select>
+      </div>
+      <div class="freq-line">
+        <span
+          class="freq-val"
+          :class="{
+            over:
+              validation.chain.ck48mMhz !== null &&
+              Math.abs(validation.chain.ck48mMhz - 48) > 1e-9,
+          }"
+        >
+          USB 时钟：{{
+            validation.chain.ck48mMhz === null
+              ? '未配置'
+              : `${Math.round(validation.chain.ck48mMhz * 1000) / 1000} MHz（需 48MHz）`
+          }}
+        </span>
+      </div>
+      <div class="hint">挂载外设：{{ peripheralsOfNode('usb48').join('、') || '—' }}</div>
+    </CollapsiblePanel>
+
+    <CollapsiblePanel title="PLL 自动解算" body-padding class="sec">
+      <div class="field">
+        <span class="field-label">目标 SYSCLK</span>
+        <el-input-number
+          :model-value="pllTarget"
+          :min="1"
+          :max="spec.sysclkMaxMhz"
+          :step="1"
+          size="small"
+          @update:model-value="(v: number | undefined) => v !== undefined && (pllTarget = v)"
+        />
+        <span class="unit">MHz</span>
+        <el-select
+          :model-value="pllSource"
+          size="small"
+          style="width: 150px"
+          placeholder="PLL 输入源"
+          clearable
+          @update:model-value="(v: string) => (pllSource = v)"
+        >
+          <el-option
+            v-for="id in spec.pll.sourceOptions"
+            :key="id"
+            :label="spec.sources.find((s) => s.id === id)?.label ?? id"
+            :value="id"
+          />
+        </el-select>
+        <el-button size="small" type="primary" plain @click="runSolve">自动解算</el-button>
+      </div>
+      <div v-if="pllSolveError" class="hint over">{{ pllSolveError }}</div>
+      <div v-if="pllSolutions?.length" class="solve-list">
+        <div v-for="(sol, i) in pllSolutions" :key="i" class="solve-row">
+          <span>{{ describeSolution(sol) }}</span>
+          <span class="solve-freq">→ {{ Math.round(sol.pllOutMhz * 1000) / 1000 }}MHz</span>
+          <el-button size="small" @click="applySolution(sol)">应用</el-button>
+        </div>
+      </div>
+      <div v-else-if="!pllSolveError" class="hint">输入目标频率后点击「自动解算」获取合法 PLL 组合。</div>
+    </CollapsiblePanel>
+
+    <CollapsiblePanel
       title="可选时钟源的外设"
       body-padding
       class="sec"
@@ -356,6 +492,26 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+.solve-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.solve-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: #374151;
+  background: #f5f7ff;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.solve-freq {
+  color: #4f46e5;
+  font-weight: 600;
 }
 .over {
   color: #dc2626;

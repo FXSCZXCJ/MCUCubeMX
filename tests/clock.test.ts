@@ -4,6 +4,7 @@ import {
   computeClock,
   defaultClock,
   mergeClockConfig,
+  solvePll,
   validateClock,
 } from '../src/lib/clock'
 import type { ClockConfig } from '../src/types'
@@ -195,5 +196,112 @@ describe('可选时钟源外设数据', () => {
     expect(select['I2S0']).toEqual(['PLLI2S', 'I2S_CKIN'])
     expect(select['RTC']).toEqual(['LXTAL', 'IRC32K', 'HXTAL128'])
     expect(Object.keys(select).length).toBeGreaterThanOrEqual(10)
+  })
+})
+
+describe('TIMER 时钟域（APB 分频 >1 时 ×2）', () => {
+  it('APB1 分频=2 时 TIMER = APB1×2', () => {
+    const c = cfg({ source: 'PLL', pllSource: 'IRC16M', pll: { mul: 4 }, apb1: 2, apb2: 1 })
+    const chain = computeClock(l233, c)
+    expect(chain.apb1Mhz).toBe(32)
+    expect(chain.apb1TimerMhz).toBe(64)
+    expect(chain.apb2TimerMhz).toBe(64) // apb2=1 → ×1
+    expect(chain.systickMhz).toBe(8)
+  })
+
+  it('APB 分频=1 时 TIMER = AHB', () => {
+    const c = cfg({ source: 'IRC16M', apb1: 1, apb2: 1 })
+    const chain = computeClock(l233, c)
+    expect(chain.apb1TimerMhz).toBe(16)
+    expect(chain.apb2TimerMhz).toBe(16)
+  })
+})
+
+describe('RTC 与 USB 48MHz 时钟域', () => {
+  it('RTC 各源频率（LXTAL/IRC32K/HXTAL32）', () => {
+    expect(computeClock(l233, cfg({ rtcSource: 'LXTAL' })).rtcMhz).toBeCloseTo(0.032768)
+    expect(computeClock(l233, cfg({ rtcSource: 'IRC32K' })).rtcMhz).toBeCloseTo(0.032)
+    expect(computeClock(l233, cfg({ rtcSource: 'HXTAL32', hxtalMhz: 8 })).rtcMhz).toBeCloseTo(0.25)
+    expect(computeClock(l233, cfg({})).rtcMhz).toBe(0)
+  })
+
+  it('L233：PLL 输出 48MHz 时 USB 校验通过，64MHz 时报错', () => {
+    const ok = validateClock(
+      l233,
+      cfg({ source: 'PLL', pllSource: 'HXTAL', hxtalMhz: 12, pll: { mul: 4 }, usbSource: 'PLL' }),
+    )
+    expect(ok.chain.ck48mMhz).toBeCloseTo(48)
+    expect(ok.errors.some((e) => e.code === 'USB48_INVALID')).toBe(false)
+    const bad = validateClock(
+      l233,
+      cfg({ source: 'PLL', pllSource: 'IRC16M', pll: { mul: 4 }, usbSource: 'PLL' }),
+    )
+    expect(bad.chain.ck48mMhz).toBe(64)
+    expect(bad.errors.some((e) => e.code === 'USB48_INVALID')).toBe(true)
+  })
+
+  it('F427：PLL48M 需要 VCO/Q=48', () => {
+    const ok = validateClock(
+      f427,
+      cfg(
+        {
+          source: 'PLL',
+          pllSource: 'HXTAL',
+          hxtalMhz: 25,
+          pll: { psc: 25, n: 384, p: 2, q: 8 },
+          usbSource: 'PLL48M',
+        },
+        defaultClock(f427),
+      ),
+    )
+    expect(ok.chain.ck48mMhz).toBeCloseTo(48)
+    expect(ok.errors.some((e) => e.code === 'USB48_INVALID')).toBe(false)
+    const bad = validateClock(
+      f427,
+      cfg(
+        {
+          source: 'PLL',
+          pllSource: 'HXTAL',
+          hxtalMhz: 25,
+          pll: { psc: 25, n: 400, p: 2, q: 9 },
+          usbSource: 'PLL48M',
+        },
+        defaultClock(f427),
+      ),
+    )
+    expect(bad.chain.ck48mMhz).toBeCloseTo(400 / 9)
+    expect(bad.errors.some((e) => e.code === 'USB48_INVALID')).toBe(true)
+  })
+
+  it('非法 RTC/USB 源报错', () => {
+    const v = validateClock(l233, cfg({ rtcSource: 'XXX', usbSource: 'YYY' }))
+    expect(v.errors.some((e) => e.code === 'RTC_SOURCE_INVALID')).toBe(true)
+    expect(v.errors.some((e) => e.code === 'USB_SOURCE_INVALID')).toBe(true)
+  })
+})
+
+describe('PLL 自动解算', () => {
+  it('L233：目标 64MHz（IRC16M）→ mul=4', () => {
+    const r = solvePll(l233, 64, 'IRC16M')
+    expect(r.error).toBeUndefined()
+    expect(r.solutions).toEqual([
+      { pllSource: 'IRC16M', params: { mul: 4 }, pllInMhz: 16, vcoMhz: null, pllOutMhz: 64 },
+    ])
+  })
+
+  it('F427：目标 200MHz（HXTAL25）→ psc=25/n=400/p=2', () => {
+    const r = solvePll(f427, 200, 'HXTAL')
+    expect(r.error).toBeUndefined()
+    expect(r.solutions.some((s) => s.params.psc === 25 && s.params.n === 400 && s.params.p === 2)).toBe(true)
+  })
+
+  it('无解/越界给出原因', () => {
+    const nonInt = solvePll(l233, 65, 'IRC16M')
+    expect(nonInt.solutions).toHaveLength(0)
+    expect(nonInt.error).toBeTruthy()
+    const over = solvePll(l233, 128, 'IRC16M')
+    expect(over.error).toContain('上限')
+    const f4Over = solvePll(f427, 201, 'HXTAL')
+    expect(f4Over.error).toBeTruthy()
   })
 })

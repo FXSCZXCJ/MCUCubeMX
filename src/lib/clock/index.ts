@@ -17,6 +17,15 @@ export interface ClockChain {
   apb1Mhz: number
   apb2Mhz: number
   adcMhz: number
+  /** APB 分频 >1 时 ×2 的 TIMER 时钟 */
+  apb1TimerMhz: number
+  apb2TimerMhz: number
+  /** SysTick = AHB/8 */
+  systickMhz: number
+  /** RTC 时钟（未配置源时为 0） */
+  rtcMhz: number
+  /** USB 48MHz 时钟（未配置源时为 null） */
+  ck48mMhz: number | null
 }
 
 export interface ClockIssue {
@@ -86,7 +95,51 @@ export function computeClock(spec: ClockSpec, config: ClockConfig): ClockChain {
   const adcOpt = spec.adc.options.find((o) => o.id === config.adc)
   const adcMhz = adcOpt ? adcClockMhz(adcOpt, apb1Mhz, apb2Mhz, ahbMhz) : 0
 
-  return { pllInMhz, pllOutMhz, vcoMhz, sysclkMhz, ahbMhz, apb1Mhz, apb2Mhz, adcMhz }
+  return {
+    pllInMhz,
+    pllOutMhz,
+    vcoMhz,
+    sysclkMhz,
+    ahbMhz,
+    apb1Mhz,
+    apb2Mhz,
+    adcMhz,
+    apb1TimerMhz: apb1Mhz * (config.apb1 > 1 ? 2 : 1),
+    apb2TimerMhz: apb2Mhz * (config.apb2 > 1 ? 2 : 1),
+    systickMhz: ahbMhz / 8,
+    rtcMhz: rtcClockMhz(spec, config),
+    ck48mMhz: ck48mClockMhz(spec, config, pllOutMhz, vcoMhz),
+  }
+}
+
+function rtcClockMhz(spec: ClockSpec, config: ClockConfig): number {
+  const lp = spec.lowPower
+  if (!lp || !config.rtcSource) return 0
+  const src = lp.rtc.sources.find((s) => s.key === config.rtcSource)
+  if (!src) return 0
+  if (src.freqMhz !== undefined) return src.freqMhz
+  if (src.divHxtal) return config.hxtalMhz / src.divHxtal
+  return 0
+}
+
+function ck48mClockMhz(
+  spec: ClockSpec,
+  config: ClockConfig,
+  pllOutMhz: number | null,
+  vcoMhz: number | null,
+): number | null {
+  const usb = spec.usb48
+  if (!usb || !config.usbSource) return null
+  const src = usb.sources.find((s) => s.key === config.usbSource)
+  if (!src) return null
+  if (src.freqMhz !== undefined) return src.freqMhz
+  // PLL 派生源：L23x 为 PLL 输出；F4xx 为 VCO/Q
+  if (spec.pll.params.some((p) => p.key === 'q')) {
+    const q = config.pll.q
+    if (!q) return null
+    return vcoMhz !== null ? vcoMhz / q : null
+  }
+  return pllOutMhz
 }
 
 export function adcClockMhz(opt: ClockAdcOption, apb1Mhz: number, apb2Mhz: number, ahbMhz: number): number {
@@ -177,6 +230,43 @@ export function validateClock(spec: ClockSpec, config: ClockConfig): ClockValida
       'adc',
       `ADC 时钟 ${fmtMhz(chain.adcMhz)} 超过上限 ${spec.adc.maxMhz} MHz`,
     )
+  }
+
+  // RTC 时钟源合法性
+  if (config.rtcSource) {
+    const lp = spec.lowPower
+    if (!lp || !lp.rtc.sources.some((s) => s.key === config.rtcSource)) {
+      pushIssue(
+        issues,
+        'error',
+        'RTC_SOURCE_INVALID',
+        'rtc',
+        `RTC 时钟源 ${config.rtcSource} 不受该器件支持`,
+      )
+    }
+  }
+
+  // USB 48MHz 约束
+  if (config.usbSource) {
+    const usb = spec.usb48
+    const src = usb?.sources.find((s) => s.key === config.usbSource)
+    if (!src) {
+      pushIssue(
+        issues,
+        'error',
+        'USB_SOURCE_INVALID',
+        'usb48',
+        `USB 48MHz 时钟源 ${config.usbSource} 不受该器件支持`,
+      )
+    } else if (chain.ck48mMhz !== null && Math.abs(chain.ck48mMhz - 48) > 1e-9) {
+      pushIssue(
+        issues,
+        'error',
+        'USB48_INVALID',
+        'usb48',
+        `USB 48MHz 时钟为 ${fmtMhz(chain.ck48mMhz)}，需要 48MHz（请调整 PLL 参数或改用 IRC48M）`,
+      )
+    }
   }
 
   return {
@@ -347,5 +437,106 @@ export function mergeClockConfig(spec: ClockSpec, partial?: Partial<ClockConfig>
     apb1: partial.apb1 ?? base.apb1,
     apb2: partial.apb2 ?? base.apb2,
     adc: partial.adc ?? base.adc,
+    ...(partial.rtcSource !== undefined ? { rtcSource: partial.rtcSource } : {}),
+    ...(partial.usbSource !== undefined ? { usbSource: partial.usbSource } : {}),
   }
+}
+
+/* ===== PLL 目标频率自动解算 ===== */
+
+export interface PllSolution {
+  pllSource: string
+  params: Record<string, number>
+  pllInMhz: number
+  vcoMhz: number | null
+  pllOutMhz: number
+}
+
+export interface SolvePllResult {
+  solutions: PllSolution[]
+  error?: string
+}
+
+/** 输入目标 SYSCLK，返回合法 PLL 参数组合（按 p、n 排序，最多 8 组） */
+export function solvePll(
+  spec: ClockSpec,
+  targetSysclkMhz: number,
+  sourceId?: string,
+): SolvePllResult {
+  if (!Number.isFinite(targetSysclkMhz) || targetSysclkMhz <= 0) {
+    return { solutions: [], error: '目标频率无效' }
+  }
+  if (targetSysclkMhz > spec.sysclkMaxMhz) {
+    return { solutions: [], error: `目标 ${fmtMhz(targetSysclkMhz)} 超过上限 ${spec.sysclkMaxMhz}MHz` }
+  }
+  const srcId = sourceId ?? pickDefaultPllSource(spec)
+  const hxtal = spec.sources.find((s) => s.hxtal)?.hxtal?.default ?? 25
+  const pllIn = sourceFreq(spec, srcId, hxtal)
+  if (pllIn === null || pllIn <= 0) {
+    return { solutions: [], error: 'PLL 输入源不可用' }
+  }
+
+  // 单级倍频（L23x）
+  if (spec.pll.params.length === 1 && spec.pll.params[0].key === 'mul') {
+    const param = spec.pll.params[0]
+    const mul = targetSysclkMhz / pllIn
+    if (Math.abs(mul - Math.round(mul)) > 1e-6) {
+      return { solutions: [], error: `目标 ${fmtMhz(targetSysclkMhz)} 无法由 ${pllIn}MHz 整数倍频得到` }
+    }
+    const m = Math.round(mul)
+    if (m < (param.min ?? 0) || m > (param.max ?? Infinity)) {
+      return { solutions: [], error: `倍频系数 ${m} 超出范围 ${param.min}~${param.max}` }
+    }
+    const out = pllIn * m
+    if (out > spec.pll.outMaxMhz) {
+      return { solutions: [], error: `输出 ${fmtMhz(out)} 超过 PLL 上限 ${spec.pll.outMaxMhz}MHz` }
+    }
+    return {
+      solutions: [{ pllSource: srcId, params: { mul: m }, pllInMhz: pllIn, vcoMhz: null, pllOutMhz: out }],
+    }
+  }
+
+  // 多级 PLL（F4xx：psc × n ÷ p）
+  const pSpec = spec.pll
+  const pscSpec = pSpec.params.find((p) => p.key === 'psc')
+  const nSpec = pSpec.params.find((p) => p.key === 'n')
+  const pSpec2 = pSpec.params.find((p) => p.key === 'p')
+  if (!pscSpec || !nSpec || !pSpec2) {
+    return { solutions: [], error: '器件 PLL 结构不受支持' }
+  }
+  const pOptions = pSpec2.options ?? [2, 4, 6, 8]
+  const solutions: PllSolution[] = []
+  for (const p of pOptions) {
+    for (let psc = pscSpec.min ?? 2; psc <= (pscSpec.max ?? 63); psc++) {
+      const pllInAfter = pllIn / psc
+      if (pllInAfter < (pSpec.inMinMhz ?? 0) || pllInAfter > (pSpec.inMaxMhz ?? Infinity)) continue
+      const n = (targetSysclkMhz * psc * p) / pllIn
+      if (Math.abs(n - Math.round(n)) > 1e-6) continue
+      const nv = Math.round(n)
+      if (nv < (nSpec.min ?? 0) || nv > (nSpec.max ?? Infinity)) continue
+      const vco = pllInAfter * nv
+      if (vco < (pSpec.vcoMinMhz ?? 0) || vco > (pSpec.vcoMaxMhz ?? Infinity)) continue
+      const out = vco / p
+      if (out > pSpec.outMaxMhz) continue
+      solutions.push({
+        pllSource: srcId,
+        params: { psc, n: nv, p },
+        pllInMhz: pllIn,
+        vcoMhz: vco,
+        pllOutMhz: out,
+      })
+    }
+  }
+  // 推荐排序：PLL 输入（源/psc）最接近 1MHz 的组合优先（与官方例程一致），再按 p、n
+  const inScore = (s: PllSolution) => Math.abs(s.pllInMhz / (s.params.psc ?? 1) - 1)
+  solutions.sort(
+    (a, b) =>
+      inScore(a) - inScore(b) ||
+      (a.params.p ?? 0) - (b.params.p ?? 0) ||
+      (a.params.n ?? 0) - (b.params.n ?? 0),
+  )
+  if (solutions.length === 0) {
+    return { solutions: [], error: `目标 ${fmtMhz(targetSysclkMhz)} 无合法 PLL 组合（检查输入 1~2MHz / VCO 100~500MHz）` }
+  }
+  return { solutions: solutions.slice(0, 8) }
 }

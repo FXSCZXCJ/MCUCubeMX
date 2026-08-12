@@ -270,6 +270,61 @@ export interface ClockSpec {
   peripherals?: ClockPeripheralsSpec
   /** 可选时钟源的外设：外设名 → 可选时钟源列表（如 USART0 → [APB2, SYSCLK, LXTAL, IRC16MDIV]） */
   clockSelect?: Record<string, string[]>
+  /** TIMER 时钟域（APB 分频 >1 时 ×2） */
+  timerDomains?: ClockTimerDomainSpec[]
+  /** 低功耗时钟域（LXTAL/IRC32K/RTC/FWDGT） */
+  lowPower?: ClockLowPowerSpec
+  /** USB 48MHz 时钟域 */
+  usb48?: ClockUsb48Spec
+}
+
+export interface ClockTimerDomainSpec {
+  id: string
+  label: string
+  bus: 'apb1' | 'apb2'
+  peripherals: string[]
+}
+
+export interface ClockRtcSourceSpec {
+  key: string
+  label: string
+  /** 固定频率源（LXTAL/IRC32K）；HXTAL 分频源用 divHxtal */
+  freqMhz?: number
+  /** HXTAL 分频系数（如 32/128） */
+  divHxtal?: number
+  macro: string
+}
+
+export interface ClockRtcSpec {
+  sources: ClockRtcSourceSpec[]
+  default: string
+  peripherals: string[]
+}
+
+export interface ClockLowPowerSpec {
+  lxtalMhz: number
+  irc32kMhz: number
+  rtc: ClockRtcSpec
+  fwdgt: { source: string; peripherals: string[] }
+}
+
+export interface ClockUsbSourceSpec {
+  key: string
+  label: string
+  /** 固定频率源（IRC48M=48）；PLL 派生源无 freqMhz */
+  freqMhz?: number
+  macro: string
+  api: string
+  /** 可选：PLL48M 选择 API（F427） */
+  extraApi?: string
+  extraMacro?: string
+}
+
+export interface ClockUsb48Spec {
+  label: string
+  default: string
+  peripherals: string[]
+  sources: ClockUsbSourceSpec[]
 }
 
 export interface ClockConfig {
@@ -285,6 +340,10 @@ export interface ClockConfig {
   apb2: number
   /** ADC 分频选项 id（来自 clock.json adc.options） */
   adc: string
+  /** RTC 时钟源（可选；缺省不生成代码） */
+  rtcSource?: string
+  /** USB 48MHz 时钟源（可选；缺省不生成代码） */
+  usbSource?: string
 }
 
 export interface Conflict {

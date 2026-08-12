@@ -69,4 +69,39 @@ describe('时钟树布局', () => {
     expect(apb1Chips.length).toBe(spec.peripherals!.apb1.length)
     expect(tree.height).toBeGreaterThan(500)
   })
+
+  it('完整时钟域：TIMER/RTC/FWDGT/USB48/SysTick 节点齐全', () => {
+    const spec = getDeviceData('GD32L233RCT6').clockSpec
+    const config = { ...defaultClock(spec), rtcSource: 'LXTAL', usbSource: 'IRC48M' }
+    const v = validateClock(spec, config)
+    const tree = buildClockTree(spec, config, v.chain, v)
+    const ids = tree.nodes.map((n) => n.id)
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'LXTAL',
+        'IRC32K',
+        'APB1_TIMER',
+        'APB2_TIMER',
+        'rtc',
+        'fwdgt',
+        'usb48',
+        'systick',
+      ]),
+    )
+    const apb1Timer = tree.nodes.find((n) => n.id === 'APB1_TIMER')!
+    expect(apb1Timer.sub).toContain('×2')
+    const rtc = tree.nodes.find((n) => n.id === 'rtc')!
+    expect(rtc.active).toBe(true)
+    const usb = tree.nodes.find((n) => n.id === 'usb48')!
+    expect(usb.active).toBe(true)
+    expect(usb.title).toContain('USBD')
+  })
+
+  it('APB1 分频=1 时 TIMER 节点显示 ×1', () => {
+    const spec = getDeviceData('GD32L233RCT6').clockSpec
+    const config = { ...defaultClock(spec), apb1: 1 }
+    const v = validateClock(spec, config)
+    const tree = buildClockTree(spec, config, v.chain, v)
+    expect(tree.nodes.find((n) => n.id === 'APB1_TIMER')!.sub).toContain('×1')
+  })
 })

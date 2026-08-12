@@ -179,5 +179,59 @@
     "I2S1": ["PLLI2S", "I2S_CKIN"],
     "I2S2": ["PLLI2S", "I2S_CKIN"],
     "RTC": ["LXTAL", "IRC32K", "HXTAL128"]
+  },
+  "timerDomains": [
+    {
+      "id": "APB1_TIMER",
+      "label": "APB1 TIMER",
+      "bus": "apb1",
+      "peripherals": [
+        "TIMER1",
+        "TIMER2",
+        "TIMER3",
+        "TIMER4",
+        "TIMER5",
+        "TIMER6",
+        "TIMER11",
+        "TIMER12",
+        "TIMER13"
+      ]
+    },
+    {
+      "id": "APB2_TIMER",
+      "label": "APB2 TIMER",
+      "bus": "apb2",
+      "peripherals": ["TIMER0", "TIMER7", "TIMER8", "TIMER9", "TIMER10"]
+    }
+  ],
+  "lowPower": {
+    "lxtalMhz": 0.032768,
+    "irc32kMhz": 0.032,
+    "rtc": {
+      "default": "LXTAL",
+      "peripherals": ["RTC"],
+      "sources": [
+        { "key": "LXTAL", "label": "LXTAL 32.768kHz", "freqMhz": 0.032768, "macro": "RCU_RTCSRC_LXTAL" },
+        { "key": "IRC32K", "label": "IRC32K 32kHz", "freqMhz": 0.032, "macro": "RCU_RTCSRC_IRC32K" },
+        { "key": "HXTAL128", "label": "HXTAL/128", "divHxtal": 128, "macro": "RCU_RTCSRC_HXTAL_DIV_RTCDIV" }
+      ]
+    },
+    "fwdgt": { "source": "IRC32K", "peripherals": ["FWDGT"] }
+  },
+  "usb48": {
+    "label": "USB 48MHz",
+    "default": "IRC48M",
+    "peripherals": ["USBHS", "USBFS", "TRNG"],
+    "sources": [
+      { "key": "IRC48M", "label": "IRC48M 48MHz", "freqMhz": 48, "macro": "RCU_CK48MSRC_IRC48M", "api": "rcu_ck48m_clock_config" },
+      {
+        "key": "PLL48M",
+        "label": "PLL48M (PLLQ)",
+        "macro": "RCU_CK48MSRC_PLL48M",
+        "api": "rcu_ck48m_clock_config",
+        "extraApi": "rcu_pll48m_clock_config",
+        "extraMacro": "RCU_PLL48MSRC_PLLQ"
+      }
+    ]
   }
 }

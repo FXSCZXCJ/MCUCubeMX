@@ -119,5 +119,42 @@
     "RTC": ["LXTAL", "IRC32K", "HXTAL32"],
     "FWDGT": ["IRC32K"],
     "CTC": ["HXTAL"]
+  },
+  "timerDomains": [
+    {
+      "id": "APB1_TIMER",
+      "label": "APB1 TIMER",
+      "bus": "apb1",
+      "peripherals": ["TIMER1", "TIMER2", "TIMER5", "TIMER6", "TIMER11"]
+    },
+    {
+      "id": "APB2_TIMER",
+      "label": "APB2 TIMER",
+      "bus": "apb2",
+      "peripherals": ["TIMER8"]
+    }
+  ],
+  "lowPower": {
+    "lxtalMhz": 0.032768,
+    "irc32kMhz": 0.032,
+    "rtc": {
+      "default": "LXTAL",
+      "peripherals": ["RTC", "SLCD"],
+      "sources": [
+        { "key": "LXTAL", "label": "LXTAL 32.768kHz", "freqMhz": 0.032768, "macro": "RCU_RTCSRC_LXTAL" },
+        { "key": "IRC32K", "label": "IRC32K 32kHz", "freqMhz": 0.032, "macro": "RCU_RTCSRC_IRC32K" },
+        { "key": "HXTAL32", "label": "HXTAL/32", "divHxtal": 32, "macro": "RCU_RTCSRC_HXTAL_DIV32" }
+      ]
+    },
+    "fwdgt": { "source": "IRC32K", "peripherals": ["FWDGT"] }
+  },
+  "usb48": {
+    "label": "USB 48MHz",
+    "default": "IRC48M",
+    "peripherals": ["USBD"],
+    "sources": [
+      { "key": "IRC48M", "label": "IRC48M 48MHz", "freqMhz": 48, "macro": "RCU_USBDSRC_IRC48M", "api": "rcu_usbd_clock_config" },
+      { "key": "PLL", "label": "PLL 输出 48MHz", "macro": "RCU_USBDSRC_PLL", "api": "rcu_usbd_clock_config" }
+    ]
   }
 }
