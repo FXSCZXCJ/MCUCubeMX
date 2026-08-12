@@ -53,6 +53,8 @@ const emit = defineEmits<{
   padding: 6px 10px;
   background: #ffffff;
   flex: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .zoom-label {
   font-size: 12px;

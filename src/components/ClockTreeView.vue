@@ -623,6 +623,8 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   gap: 10px;
   height: calc(100vh - 196px);
   min-width: 920px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .view-header {
   display: flex;
@@ -677,6 +679,8 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
   top: 50%;
   transform-origin: center center;
   transition: transform 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .tree-text {
   transform-box: fill-box;
