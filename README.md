@@ -17,7 +17,7 @@
 
 ### 封装图
 
-- 数据驱动程序化生成，按状态着色（未配置/输出/输入/EXTI/冲突/电源/特殊）
+- 数据驱动程序化生成，按状态着色（未配置/输出/输入/复用(AF)/模拟/EXTI/冲突/电源/特殊）
 - GPIO 名显示在芯片内部，配置标签显示在引脚外侧（不截断），上下侧标签交错防重叠，四角引脚向内让位
 - **45° 步进旋转**（旋转时文字保持水平可读），自动适配旋转后的实际占用空间
 - **悬停显示引脚详情**：类型/别名/当前配置（模式、功能、输出参数、上下拉、EXTI）与所属分组
@@ -35,7 +35,8 @@
 
 ### 代码生成
 
-- EJS 模板生成 `gpio.h`（分组宏定义）、`gpio.c`（`MX_GPIO_Init` / `MX_EXTI_Init`）、
+- EJS 模板生成 `gpio.h`（分组宏定义）、`gpio.c`（`MX_GPIO_Init` / `MX_EXTI_Init`，
+  含复用 `gpio_af_set` 与模拟 `GPIO_MODE_ANALOG` 初始化段）、
   `app_it.c`（EXTI 中断骨架，带 USER CODE 区段）、`project.json`、`README.md`，打包 ZIP 下载
 - 按器件的固件档案自动适配（头文件、速度档位、NVIC 优先级分组、EXTI 边沿枚举）
 - 本地 `arm-none-eabi-gcc` + 官方固件库编译验证生成代码
@@ -130,5 +131,6 @@ tests/                    数据、冲突、代码生成、封装图、JLC 导�
 
 - **Phase 1（当前）**：引脚配置 + GPIO/EXTI 代码生成 + 编译验证 + 嘉立创 EDA Pro 双向同步
 - **Phase 2**：时钟树配置（合法性计算 + 生成 `system_gd32l23x.c` 覆盖段）
-- **Phase 3**：外设生成（UART/SPI/I2C/ADC/TIMER 的 AF 自动分配与实例冲突检查）
+- **Phase 3**：已完成 AF 复用/模拟选择（互斥检查）、外设使用侧边栏、引脚分组；
+  剩余外设驱动初始化（UART/SPI/I2C/ADC/TIMER 的 AF 自动分配与实例配置）
 - **Phase 4**：工程级导出（Keil/GCC/Embedded Builder、链接脚本、`main.c` 骨架、多型号支持）
