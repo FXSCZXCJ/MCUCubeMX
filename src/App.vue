@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import PackageView from './components/PackageView.vue'
 import PinTable from './components/PinTable.vue'
 import PinConfigPanel from './components/PinConfigPanel.vue'
+import PeripheralConfigPanel from './components/PeripheralConfigPanel.vue'
 import ConflictsPanel from './components/ConflictsPanel.vue'
 import PeripheralUsagePanel from './components/PeripheralUsagePanel.vue'
 import ExtiAllocationPanel from './components/ExtiAllocationPanel.vue'
@@ -148,6 +149,9 @@ async function clearAll() {
         <aside class="config-pane">
           <CollapsiblePanel title="引脚配置">
             <PinConfigPanel />
+          </CollapsiblePanel>
+          <CollapsiblePanel title="外设配置" :default-open="false">
+            <PeripheralConfigPanel />
           </CollapsiblePanel>
           <CollapsiblePanel title="引脚列表" :badge="`${store.assignedCount}/${64}`">
             <div class="table-wrap">

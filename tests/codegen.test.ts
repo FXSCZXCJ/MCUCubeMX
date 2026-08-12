@@ -23,7 +23,19 @@ describe('代码生成 GD32L233RCT6 (sample-project)', () => {
 
   it('生成完整文件集', () => {
     expect(files.map((f) => f.path).sort()).toEqual(
-      ['README.md', 'app_it.c', 'clock.c', 'clock.h', 'gpio.c', 'gpio.h', 'project.json'].sort(),
+      [
+        'README.md',
+        'adc.c',
+        'adc.h',
+        'app_it.c',
+        'clock.c',
+        'clock.h',
+        'gpio.c',
+        'gpio.h',
+        'project.json',
+        'usart.c',
+        'usart.h',
+      ].sort(),
     )
   })
 

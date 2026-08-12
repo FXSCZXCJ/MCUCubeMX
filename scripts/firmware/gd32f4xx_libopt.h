@@ -8,5 +8,6 @@
 #include "gd32f4xx_misc.h"
 #include "gd32f4xx_adc.h"
 #include "gd32f4xx_pmu.h"
+#include "gd32f4xx_usart.h"
 
 #endif /* GD32F4XX_LIBOPT_H */

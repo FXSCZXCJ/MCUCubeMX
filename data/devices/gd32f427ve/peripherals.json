@@ -1,0 +1,190 @@
+{
+  "device": "GD32F427VE",
+  "source": "GD32F4xx 标准外设库（gd32f4xx_usart/adc）+ 用户手册 Rev2.2",
+  "usart": [
+    {
+      "id": "USART0",
+      "label": "USART0",
+      "afPrefix": "USART0",
+      "periphMacro": "USART0",
+      "clockEnable": "RCU_USART0",
+      "defaultClockSource": "APB2"
+    },
+    {
+      "id": "USART1",
+      "label": "USART1",
+      "afPrefix": "USART1",
+      "periphMacro": "USART1",
+      "clockEnable": "RCU_USART1",
+      "defaultClockSource": "APB1"
+    },
+    {
+      "id": "USART2",
+      "label": "USART2",
+      "afPrefix": "USART2",
+      "periphMacro": "USART2",
+      "clockEnable": "RCU_USART2",
+      "defaultClockSource": "APB1"
+    },
+    {
+      "id": "UART3",
+      "label": "UART3",
+      "afPrefix": "UART3",
+      "periphMacro": "UART3",
+      "clockEnable": "RCU_UART3",
+      "defaultClockSource": "APB1"
+    },
+    {
+      "id": "UART4",
+      "label": "UART4",
+      "afPrefix": "UART4",
+      "periphMacro": "UART4",
+      "clockEnable": "RCU_UART4",
+      "defaultClockSource": "APB1"
+    },
+    {
+      "id": "UART6",
+      "label": "UART6",
+      "afPrefix": "UART6",
+      "periphMacro": "UART6",
+      "clockEnable": "RCU_UART6",
+      "defaultClockSource": "APB1"
+    },
+    {
+      "id": "UART7",
+      "label": "UART7",
+      "afPrefix": "UART7",
+      "periphMacro": "UART7",
+      "clockEnable": "RCU_UART7",
+      "defaultClockSource": "APB1"
+    }
+  ],
+  "adc": [
+    {
+      "id": "ADC0",
+      "label": "ADC0",
+      "afPrefix": "ADC",
+      "periphArg": "ADC0",
+      "clockEnable": "RCU_ADC0",
+      "channelFunction": "adc_regular_channel_config",
+      "groupMacro": "ADC_REGULAR_CHANNEL",
+      "extTriggerPrefix": "ADC_EXTTRIG_REGULAR_",
+      "resolutions": [
+        { "label": "12 位", "macro": "ADC_RESOLUTION_12B" },
+        { "label": "10 位", "macro": "ADC_RESOLUTION_10B" },
+        { "label": "8 位", "macro": "ADC_RESOLUTION_8B" },
+        { "label": "6 位", "macro": "ADC_RESOLUTION_6B" }
+      ],
+      "dataAlignments": [
+        { "label": "右对齐", "macro": "ADC_DATAALIGN_RIGHT" },
+        { "label": "左对齐", "macro": "ADC_DATAALIGN_LEFT" }
+      ],
+      "sampleTimes": [
+        { "label": "3 周期", "macro": "ADC_SAMPLETIME_3" },
+        { "label": "15 周期", "macro": "ADC_SAMPLETIME_15" },
+        { "label": "28 周期", "macro": "ADC_SAMPLETIME_28" },
+        { "label": "56 周期", "macro": "ADC_SAMPLETIME_56" },
+        { "label": "84 周期", "macro": "ADC_SAMPLETIME_84" },
+        { "label": "112 周期", "macro": "ADC_SAMPLETIME_112" },
+        { "label": "144 周期", "macro": "ADC_SAMPLETIME_144" },
+        { "label": "480 周期", "macro": "ADC_SAMPLETIME_480" }
+      ],
+      "externalTriggers": [
+        { "label": "软件触发", "macro": "ADC_EXTTRIG_REGULAR_NONE" },
+        { "label": "TIMER0 CH0", "macro": "ADC_EXTTRIG_REGULAR_T0_CH0" },
+        { "label": "TIMER1 CH1", "macro": "ADC_EXTTRIG_REGULAR_T1_CH1" },
+        { "label": "TIMER2 TRGO", "macro": "ADC_EXTTRIG_REGULAR_T2_TRGO" }
+      ],
+      "defaults": {
+        "resolution": "ADC_RESOLUTION_12B",
+        "dataAlignment": "ADC_DATAALIGN_RIGHT",
+        "sampleTime": "ADC_SAMPLETIME_15",
+        "externalTrigger": "ADC_EXTTRIG_REGULAR_NONE"
+      }
+    },
+    {
+      "id": "ADC1",
+      "label": "ADC1",
+      "afPrefix": "ADC",
+      "periphArg": "ADC1",
+      "clockEnable": "RCU_ADC1",
+      "channelFunction": "adc_regular_channel_config",
+      "groupMacro": "ADC_REGULAR_CHANNEL",
+      "extTriggerPrefix": "ADC_EXTTRIG_REGULAR_",
+      "resolutions": [
+        { "label": "12 位", "macro": "ADC_RESOLUTION_12B" },
+        { "label": "10 位", "macro": "ADC_RESOLUTION_10B" },
+        { "label": "8 位", "macro": "ADC_RESOLUTION_8B" },
+        { "label": "6 位", "macro": "ADC_RESOLUTION_6B" }
+      ],
+      "dataAlignments": [
+        { "label": "右对齐", "macro": "ADC_DATAALIGN_RIGHT" },
+        { "label": "左对齐", "macro": "ADC_DATAALIGN_LEFT" }
+      ],
+      "sampleTimes": [
+        { "label": "3 周期", "macro": "ADC_SAMPLETIME_3" },
+        { "label": "15 周期", "macro": "ADC_SAMPLETIME_15" },
+        { "label": "28 周期", "macro": "ADC_SAMPLETIME_28" },
+        { "label": "56 周期", "macro": "ADC_SAMPLETIME_56" },
+        { "label": "84 周期", "macro": "ADC_SAMPLETIME_84" },
+        { "label": "112 周期", "macro": "ADC_SAMPLETIME_112" },
+        { "label": "144 周期", "macro": "ADC_SAMPLETIME_144" },
+        { "label": "480 周期", "macro": "ADC_SAMPLETIME_480" }
+      ],
+      "externalTriggers": [
+        { "label": "软件触发", "macro": "ADC_EXTTRIG_REGULAR_NONE" },
+        { "label": "TIMER0 CH0", "macro": "ADC_EXTTRIG_REGULAR_T0_CH0" },
+        { "label": "TIMER1 CH1", "macro": "ADC_EXTTRIG_REGULAR_T1_CH1" },
+        { "label": "TIMER2 TRGO", "macro": "ADC_EXTTRIG_REGULAR_T2_TRGO" }
+      ],
+      "defaults": {
+        "resolution": "ADC_RESOLUTION_12B",
+        "dataAlignment": "ADC_DATAALIGN_RIGHT",
+        "sampleTime": "ADC_SAMPLETIME_15",
+        "externalTrigger": "ADC_EXTTRIG_REGULAR_NONE"
+      }
+    },
+    {
+      "id": "ADC2",
+      "label": "ADC2",
+      "afPrefix": "ADC",
+      "periphArg": "ADC2",
+      "clockEnable": "RCU_ADC2",
+      "channelFunction": "adc_regular_channel_config",
+      "groupMacro": "ADC_REGULAR_CHANNEL",
+      "extTriggerPrefix": "ADC_EXTTRIG_REGULAR_",
+      "resolutions": [
+        { "label": "12 位", "macro": "ADC_RESOLUTION_12B" },
+        { "label": "10 位", "macro": "ADC_RESOLUTION_10B" },
+        { "label": "8 位", "macro": "ADC_RESOLUTION_8B" },
+        { "label": "6 位", "macro": "ADC_RESOLUTION_6B" }
+      ],
+      "dataAlignments": [
+        { "label": "右对齐", "macro": "ADC_DATAALIGN_RIGHT" },
+        { "label": "左对齐", "macro": "ADC_DATAALIGN_LEFT" }
+      ],
+      "sampleTimes": [
+        { "label": "3 周期", "macro": "ADC_SAMPLETIME_3" },
+        { "label": "15 周期", "macro": "ADC_SAMPLETIME_15" },
+        { "label": "28 周期", "macro": "ADC_SAMPLETIME_28" },
+        { "label": "56 周期", "macro": "ADC_SAMPLETIME_56" },
+        { "label": "84 周期", "macro": "ADC_SAMPLETIME_84" },
+        { "label": "112 周期", "macro": "ADC_SAMPLETIME_112" },
+        { "label": "144 周期", "macro": "ADC_SAMPLETIME_144" },
+        { "label": "480 周期", "macro": "ADC_SAMPLETIME_480" }
+      ],
+      "externalTriggers": [
+        { "label": "软件触发", "macro": "ADC_EXTTRIG_REGULAR_NONE" },
+        { "label": "TIMER0 CH0", "macro": "ADC_EXTTRIG_REGULAR_T0_CH0" },
+        { "label": "TIMER1 CH1", "macro": "ADC_EXTTRIG_REGULAR_T1_CH1" },
+        { "label": "TIMER2 TRGO", "macro": "ADC_EXTTRIG_REGULAR_T2_TRGO" }
+      ],
+      "defaults": {
+        "resolution": "ADC_RESOLUTION_12B",
+        "dataAlignment": "ADC_DATAALIGN_RIGHT",
+        "sampleTime": "ADC_SAMPLETIME_15",
+        "externalTrigger": "ADC_EXTTRIG_REGULAR_NONE"
+      }
+    }
+  ]
+}

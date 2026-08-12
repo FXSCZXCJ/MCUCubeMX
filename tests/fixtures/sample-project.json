@@ -25,7 +25,26 @@
     },
     {
       "pin": "PA0",
-      "mode": "INPUT",
+      "mode": "ANALOG",
+      "function": "ADC_IN0",
+      "params": {
+        "pull": "NONE",
+        "exti": { "enabled": false, "edge": "FALLING" }
+      }
+    },
+    {
+      "pin": "PA9",
+      "mode": "AF",
+      "function": "USART0_TX",
+      "params": {
+        "pull": "NONE",
+        "exti": { "enabled": false, "edge": "FALLING" }
+      }
+    },
+    {
+      "pin": "PA10",
+      "mode": "AF",
+      "function": "USART0_RX",
       "params": {
         "pull": "NONE",
         "exti": { "enabled": false, "edge": "FALLING" }
@@ -42,5 +61,27 @@
     "apb1": 2,
     "apb2": 1,
     "adc": "APB2_DIV4"
+  },
+  "peripherals": {
+    "USART0": {
+      "enabled": true,
+      "params": {
+        "baudrate": 115200,
+        "wordLength": "USART_WL_8BIT",
+        "stopBits": "USART_STB_1BIT",
+        "parity": "USART_PM_NONE",
+        "flowControl": "NONE",
+        "clockSource": "APB2"
+      }
+    },
+    "ADC0": {
+      "enabled": true,
+      "params": {
+        "resolution": "ADC_RESOLUTION_12B",
+        "dataAlignment": "ADC_DATAALIGN_RIGHT",
+        "sampleTime": "ADC_SAMPLETIME_13POINT5",
+        "externalTrigger": "ADC_EXTTRIG_ROUTINE_NONE"
+      }
+    }
   }
 }

@@ -35,6 +35,12 @@ exports[`代码生成 GD32F427VE (sample-project-f427) > 生成内容与快照�
 #define PA0_Pin         GPIO_PIN_0
 #define PA0_GPIO_Port   GPIOA
 
+#define PA9_Pin         GPIO_PIN_9
+#define PA9_GPIO_Port   GPIOA
+
+#define PA10_Pin         GPIO_PIN_10
+#define PA10_GPIO_Port   GPIOA
+
 
 
 /* 初始化函数声明 */
@@ -84,9 +90,18 @@ void MX_GPIO_Init(void)
     gpio_mode_set(GPIOC, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, GPIO_PIN_13);
 
 
-    /* PA0 (PA0) */
-    gpio_mode_set(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO_PIN_0);
+    /* ============ 复用功能引脚 ============ */
+    /* PA9 (PA9 : USART0_TX) */
+    gpio_mode_set(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO_PIN_9);
+    gpio_af_set(GPIOA, GPIO_AF_7, GPIO_PIN_9);
 
+    /* PA10 (PA10 : USART0_RX) */
+    gpio_mode_set(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO_PIN_10);
+    gpio_af_set(GPIOA, GPIO_AF_7, GPIO_PIN_10);
+
+    /* ============ 模拟引脚 ============ */
+    /* PA0 (PA0 : ADC012_IN0) */
+    gpio_mode_set(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO_PIN_0);
 
 }
 
@@ -150,6 +165,12 @@ exports[`代码生成 GD32L233RCT6 (sample-project) > 生成内容与快照一�
 #define PA0_Pin         GPIO_PIN_0
 #define PA0_GPIO_Port   GPIOA
 
+#define PA9_Pin         GPIO_PIN_9
+#define PA9_GPIO_Port   GPIOA
+
+#define PA10_Pin         GPIO_PIN_10
+#define PA10_GPIO_Port   GPIOA
+
 
 
 /* 初始化函数声明 */
@@ -199,9 +220,18 @@ void MX_GPIO_Init(void)
     gpio_mode_set(GPIOC, GPIO_MODE_INPUT, GPIO_PUPD_PULLDOWN, GPIO_PIN_13);
 
 
-    /* PA0 (PA0) */
-    gpio_mode_set(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO_PIN_0);
+    /* ============ 复用功能引脚 ============ */
+    /* PA9 (PA9 : USART0_TX) */
+    gpio_mode_set(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO_PIN_9);
+    gpio_af_set(GPIOA, GPIO_AF_7, GPIO_PIN_9);
 
+    /* PA10 (PA10 : USART0_RX) */
+    gpio_mode_set(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO_PIN_10);
+    gpio_af_set(GPIOA, GPIO_AF_7, GPIO_PIN_10);
+
+    /* ============ 模拟引脚 ============ */
+    /* PA0 (PA0 : ADC_IN0) */
+    gpio_mode_set(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO_PIN_0);
 
 }
 

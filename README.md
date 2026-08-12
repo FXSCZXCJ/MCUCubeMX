@@ -31,6 +31,8 @@
 - 标签命名 + 分组宏定义；配置工程文件（JSON）导入/导出
 - 冲突检查：特殊引脚保护（NRST/BOOT/SWD 需显式解锁）、EXTI 线冲突、AF/模拟信号重复、电源引脚拦截、重复标签
 - 右侧栏「外设使用情况」：按外设归并展示信号与引脚（USART1: TX=PA10…）、EXTI、通用 GPIO
+- 右侧栏「外设配置」：USART/ADC 实例配置面板（由 AF/模拟引脚自动归并实例），
+  支持波特率/字长/停止位/校验/流控/时钟源，以及 ADC 分辨率/对齐/采样时间/触发源/通道列表
 - 右侧栏「中断线分配」：16 条 EXTI 线全量列表（EXTI0~4 / EXTI5_9 / EXTI10_15 分组），
   显示已分配引脚、标签、触发边沿与空闲状态
 - 右侧栏「引脚分组」：按模块自定义分组（单归属、自动配色），封装图按组描边
@@ -66,6 +68,8 @@
   含复用 `gpio_af_set` 与模拟 `GPIO_MODE_ANALOG` 初始化段）、
   `clock.h/clock.c`（`MX_Clock_Init`：振荡器使能、PLL 配置、AHB/APB1/APB2/ADC 分频、
    SYSCLK 源选择；F427 顺带 NVIC 优先级分组与 200MHz 高压驱动模式）、
+  `usart.h/c`（`MX_USARTx_Init`：波特率/字长/停止位/校验/流控/时钟源）与
+  `adc.h/c`（`MX_ADCx_Init`：分辨率/对齐/通道/采样/触发，L23x 单 ADC 与 F4xx ADCx 自动适配 API）、
   `app_it.c`（EXTI 中断骨架，带 USER CODE 区段）、`project.json`、`README.md`，打包 ZIP 下载
 - 按器件的固件档案自动适配（头文件、速度档位、NVIC 优先级分组、EXTI 边沿枚举）
 - 生成独立 `clock.c`（不改动固件库 system 文件），旧工程配置无时钟字段时自动使用器件默认时钟
@@ -138,9 +142,11 @@ F4xx 编译验证使用仓库自带的 CMSIS 5 内核头（`scripts/firmware/cms
   IRC16M/IRC48M/HXTAL(4~32MHz)、PLL(×4~×127、输出≤64MHz)、AHB/APB1(≤32MHz)/APB2(≤64MHz)/ADC(≤16MHz)
   分频档位、固件库宏映射与各总线挂载外设清单；GD32F427VE 的 `clock.json` 转录自
   GD32F4xx 用户手册（PLL PSC/N/P/Q、SYSCLK≤200MHz、APB1≤60MHz、APB2≤120MHz、ADC≤40MHz）
+- `peripherals.json`：外设实例规格（USART 信号前缀/时钟源映射、ADC 分辨率/采样/触发选项），
+  按固件库头文件与用户手册转录
 
 `scripts/validate-device-data.mjs` 强制执行一致性校验：引脚唯一连续、每边引脚数、
-AF 表与引脚定义集合一致、EXTI 分组正确、clock.json 档位/范围/宏映射齐全。
+AF 表与引脚定义集合一致、EXTI 分组正确、clock.json 档位/范围/宏映射齐全、peripherals.json 结构合法。
 
 ## 架构
 
@@ -167,6 +173,7 @@ tests/                    数据、冲突、代码生成、封装图、JLC 导�
 - **Phase 1（已完成）**：引脚配置 + GPIO/EXTI 代码生成 + 编译验证 + 嘉立创 EDA Pro 双向同步
 - **Phase 2（已完成）**：图形化时钟树配置（频率链计算 + 合法性校验 + 生成独立 `clock.c/clock.h`，
   已接入 L233/F427 编译验证）；后续可扩展图形化 PLL 自动解算与更多时钟输出（CK_OUT/USBD）
-- **Phase 3**：已完成 AF 复用/模拟选择（互斥检查）、外设使用侧边栏、引脚分组；
-  剩余外设驱动初始化（UART/SPI/I2C/ADC/TIMER 的 AF 自动分配与实例配置）
+- **Phase 3**：已完成 AF 复用/模拟选择（互斥检查）、外设使用侧边栏、引脚分组、
+  **USART/ADC 外设配置与代码生成**（M1/M2，含编译验证）；剩余 SPI/I2C/TIMER 扩展、
+  USART/ADC 中断与 DMA 支持
 - **Phase 4**：工程级导出（Keil/GCC/Embedded Builder、链接脚本、`main.c` 骨架、多型号支持）

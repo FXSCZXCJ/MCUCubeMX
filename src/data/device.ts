@@ -1,12 +1,21 @@
-import type { AfEntry, ClockSpec, DevicePackage, ExtiEntry, PinDef } from '../types'
+import type {
+  AfEntry,
+  ClockSpec,
+  DevicePackage,
+  ExtiEntry,
+  PeripheralSpec,
+  PinDef,
+} from '../types'
 import deviceJson from '../../data/devices/gd32l233rct6/package.json'
 import afJson from '../../data/devices/gd32l233rct6/af.json'
 import extiJson from '../../data/devices/gd32l233rct6/exti.json'
 import clockJson from '../../data/devices/gd32l233rct6/clock.json'
+import peripheralJson from '../../data/devices/gd32l233rct6/peripherals.json'
 import f427DeviceJson from '../../data/devices/gd32f427ve/package.json'
 import f427AfJson from '../../data/devices/gd32f427ve/af.json'
 import f427ExtiJson from '../../data/devices/gd32f427ve/exti.json'
 import f427ClockJson from '../../data/devices/gd32f427ve/clock.json'
+import f427PeripheralJson from '../../data/devices/gd32f427ve/peripherals.json'
 
 export const DEFAULT_DEVICE_ID = 'GD32L233RCT6'
 
@@ -28,6 +37,7 @@ export interface DeviceData {
   afEntries: AfEntry[]
   extiEntries: ExtiEntry[]
   clockSpec: ClockSpec
+  peripheralSpec: PeripheralSpec
   lookup: Lookup
 }
 
@@ -73,6 +83,7 @@ function buildDevice(
   afEntries: AfEntry[],
   extiEntries: ExtiEntry[],
   clockSpec: ClockSpec,
+  peripheralSpec: PeripheralSpec,
 ): DeviceData {
   return {
     id,
@@ -80,6 +91,7 @@ function buildDevice(
     afEntries,
     extiEntries,
     clockSpec,
+    peripheralSpec,
     lookup: buildLookup(device, afEntries, extiEntries),
   }
 }
@@ -91,6 +103,7 @@ export const devices: Record<string, DeviceData> = {
     afJson.entries as AfEntry[],
     extiJson.entries as ExtiEntry[],
     clockJson as ClockSpec,
+    peripheralJson as PeripheralSpec,
   ),
   GD32F427VE: buildDevice(
     'GD32F427VE',
@@ -98,6 +111,7 @@ export const devices: Record<string, DeviceData> = {
     f427AfJson.entries as AfEntry[],
     f427ExtiJson.entries as ExtiEntry[],
     f427ClockJson as ClockSpec,
+    f427PeripheralJson as PeripheralSpec,
   ),
 }
 

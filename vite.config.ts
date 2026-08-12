@@ -20,9 +20,15 @@ function jlcBridgePlugin(): Plugin {
     configureServer(server) {
       try {
         child = spawn(process.execPath, [bridgeScript], {
-          stdio: 'inherit',
+          // 用 ignore 避免子进程持有父进程 stdout 管道：
+          // 否则 vite-node 脚本模式（如 verify-build）会因桥进程未退出而挂起
+          stdio: 'ignore',
+          // detached + unref：桥独立运行，不占用父进程事件循环，
+          // 否则 vite-node 执行完脚本后进程无法退出（桥未启动时会一直挂起）
+          detached: true,
           windowsHide: true,
         })
+        child.unref()
         child.on('exit', () => {
           child = null
         })

@@ -89,6 +89,7 @@ if (isL23x) {
     path.join(spSrc, 'gd32l23x_misc.c'),
     path.join(spSrc, 'gd32l23x_rcu.c'),
     path.join(spSrc, 'gd32l23x_adc.c'),
+    path.join(spSrc, 'gd32l23x_usart.c'),
   ]
 } else {
   const cmsis = path.join(firmwareDir, 'cmsis', 'gd', 'gd32f4xx', 'include')
@@ -105,6 +106,7 @@ if (isL23x) {
     path.join(spSrc, 'gd32f4xx_rcu.c'),
     path.join(spSrc, 'gd32f4xx_adc.c'),
     path.join(spSrc, 'gd32f4xx_pmu.c'),
+    path.join(spSrc, 'gd32f4xx_usart.c'),
   ]
 }
 

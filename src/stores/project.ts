@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import type {
   ClockConfig,
   Conflict,
+  PeripheralConfig,
   PinAssignment,
   PinGroup,
   PinMode,
@@ -37,6 +38,7 @@ export const useProjectStore = defineStore('project', {
     selectedPin: null as string | null,
     /** 时钟树中当前聚焦的编辑区（source/pll/sysclk/ahb/apb1/apb2/adc） */
     clockFocus: null as string | null,
+    peripherals: {} as Record<string, PeripheralConfig>,
     unlocked: [] as string[],
     clock: defaultClock(getClockSpec('GD32L233RCT6')) as ClockConfig,
   }),
@@ -62,6 +64,7 @@ export const useProjectStore = defineStore('project', {
         groups: this.groups,
         naming: { prefix: this.prefix },
         clock: this.clock,
+        peripherals: this.peripherals,
       }
     },
     deviceData(): DeviceData {
@@ -75,6 +78,7 @@ export const useProjectStore = defineStore('project', {
       this.deviceId = id
       this.clearAll()
       this.clock = defaultClock(getClockSpec(id))
+      this.peripherals = {}
     },
     selectPin(name: string | null) {
       this.selectedPin = name
@@ -120,6 +124,23 @@ export const useProjectStore = defineStore('project', {
     },
     setClockFocus(id: string | null) {
       this.clockFocus = id
+    },
+    setPeripheral(id: string, patch: Partial<PeripheralConfig>) {
+      const spec = getDeviceData(this.deviceId).peripheralSpec
+      const exists =
+        spec.usart.some((u) => u.id === id) || spec.adc.some((a) => a.id === id)
+      if (!exists) return
+      const current = this.peripherals[id]
+      this.peripherals = {
+        ...this.peripherals,
+        [id]: {
+          enabled: patch.enabled ?? current?.enabled ?? true,
+          params: { ...(current?.params ?? {}), ...(patch.params ?? {}) },
+        },
+      }
+    },
+    resetPeripherals() {
+      this.peripherals = {}
     },
     resetClock() {
       this.clock = defaultClock(getClockSpec(this.deviceId))
@@ -172,12 +193,14 @@ export const useProjectStore = defineStore('project', {
       this.prefix = config.naming?.prefix || 'MX_'
       const spec = getClockSpec(this.deviceId)
       this.clock = config.clock ? mergeClockConfig(spec, config.clock) : defaultClock(spec)
+      this.peripherals = config.peripherals ?? {}
     },
     /** 应用嘉立创导入结果：必要时切换器件并整体替换引脚配置 */
     applyImport(deviceId: string, assignments: PinAssignment[]) {
       if (deviceId !== this.deviceId && getDeviceData(deviceId)) {
         this.deviceId = deviceId
         this.clock = defaultClock(getClockSpec(deviceId))
+        this.peripherals = {}
       }
       const next: Record<string, PinAssignment> = {}
       for (const assignment of assignments) {

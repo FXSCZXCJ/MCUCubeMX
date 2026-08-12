@@ -199,6 +199,140 @@ void <%= prefix %>Clock_Init(void)
 }
 `
 
+export const USART_H_TEMPLATE = `/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file    usart.h
+  * @brief   串口初始化声明 - 由 MCUCubeMX 自动生成
+  * @target  <%= device %>
+  * @note    重新生成时本文件会被覆盖，请把手写代码放在 USER CODE 区段内
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+#ifndef __USART_H
+#define __USART_H
+
+#include "<%= includeHeader %>"
+
+<% usarts.forEach(function(u){ -%>
+void <%= prefix %><%= u.id %>_Init(void);
+<% }); -%>
+
+#endif /* __USART_H */
+`
+
+export const USART_C_TEMPLATE = `/**
+  ******************************************************************************
+  * @file    usart.c
+  * @brief   串口初始化 - 由 MCUCubeMX 自动生成
+  * @target  <%= device %>
+  * @note    重新生成时本文件会被覆盖，请把手写代码放在 USER CODE 区段内
+  ******************************************************************************
+  */
+
+#include "usart.h"
+
+<% usarts.forEach(function(u){ -%>
+/**
+  * @brief  初始化 <%= u.id %>
+  */
+void <%= prefix %><%= u.id %>_Init(void)
+{
+    rcu_periph_clock_enable(<%= u.clockEnable %>);
+<% if (u.clockSourceCall) { -%>
+    /* 时钟源：<%= u.clockSourceLabel %> */
+    <%= u.clockSourceCall %>;
+
+<% } -%>
+    /* <%= u.id %>：<%= u.pinsText %> */
+    usart_deinit(<%= u.periphMacro %>);
+    usart_baudrate_set(<%= u.periphMacro %>, <%= u.baudrate %>);
+    usart_word_length_set(<%= u.periphMacro %>, <%= u.wordLength %>);
+    usart_stop_bit_set(<%= u.periphMacro %>, <%= u.stopBits %>);
+    usart_parity_config(<%= u.periphMacro %>, <%= u.parity %>);
+    usart_hardware_flow_rts_config(<%= u.periphMacro %>, <%= u.flowRts %>);
+    usart_hardware_flow_cts_config(<%= u.periphMacro %>, <%= u.flowCts %>);
+    usart_transmit_config(<%= u.periphMacro %>, <%= u.txConfig %>);
+    usart_receive_config(<%= u.periphMacro %>, <%= u.rxConfig %>);
+    usart_enable(<%= u.periphMacro %>);
+
+    /* USER CODE BEGIN <%= u.id %>Init */
+    /* USER CODE END <%= u.id %>Init */
+}
+
+<% }); -%>
+`
+
+export const ADC_H_TEMPLATE = `/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file    adc.h
+  * @brief   ADC 初始化声明 - 由 MCUCubeMX 自动生成
+  * @target  <%= device %>
+  * @note    重新生成时本文件会被覆盖，请把手写代码放在 USER CODE 区段内
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+#ifndef __ADC_H
+#define __ADC_H
+
+#include "<%= includeHeader %>"
+
+<% adcs.forEach(function(a){ -%>
+void <%= prefix %><%= a.id %>_Init(void);
+<% }); -%>
+
+#endif /* __ADC_H */
+`
+
+export const ADC_C_TEMPLATE = `/**
+  ******************************************************************************
+  * @file    adc.c
+  * @brief   ADC 初始化 - 由 MCUCubeMX 自动生成
+  * @target  <%= device %>
+  * @note    重新生成时本文件会被覆盖，请把手写代码放在 USER CODE 区段内
+  *          ADC 时钟分频由 clock.c（MX_Clock_Init）配置
+  ******************************************************************************
+  */
+
+#include "adc.h"
+
+<% adcs.forEach(function(a){ -%>
+/**
+  * @brief  初始化 <%= a.id %>
+  */
+void <%= prefix %><%= a.id %>_Init(void)
+{
+    rcu_periph_clock_enable(<%= a.clockEnable %>);
+    /* 通道：<%= a.channelsText %> */
+    adc_resolution_config(<%= a.argMulti %><%= a.resolution %>);
+    adc_data_alignment_config(<%= a.argMulti %><%= a.dataAlignment %>);
+    adc_channel_length_config(<%= a.argMulti %><%= a.groupMacro %>, <%= a.channelCount %>);
+<% a.channels.forEach(function(ch){ -%>
+    <%= a.channelFunction %>(<%= a.argMulti %><%= ch.rank %>, <%= ch.channelMacro %>, <%= a.sampleTime %>);
+<% }); -%>
+    adc_external_trigger_config(<%= a.argMulti %><%= a.groupMacro %>, <%= a.triggerEnabled ? 'ENABLE' : 'DISABLE' %>);
+<% if (a.triggerEnabled) { -%>
+    adc_external_trigger_source_config(<%= a.argMulti %><%= a.groupMacro %>, <%= a.triggerMacro %>);
+<% } -%>
+<% if (a.scanMode) { -%>
+    adc_special_function_config(<%= a.argMulti %>ADC_SCAN_MODE, ENABLE);
+<% } -%>
+    adc_enable(<%= a.argSingle %>);
+    adc_calibration_enable(<%= a.argSingle %>);
+<% if (!a.triggerEnabled) { -%>
+    adc_software_trigger_enable(<%= a.argMulti %><%= a.groupMacro %>);
+<% } -%>
+
+    /* USER CODE BEGIN <%= a.id %>Init */
+    /* USER CODE END <%= a.id %>Init */
+}
+
+<% }); -%>
+`
+
 export const APP_IT_C_TEMPLATE = `/**
   ******************************************************************************
   * @file    app_it.c
@@ -235,6 +369,12 @@ export const README_TEMPLATE = `# MCUCubeMX 生成结果
 - gpio.h: 引脚宏定义（按组别分组）与初始化函数声明
 - gpio.c: GPIO 与 EXTI 初始化实现（MX_GPIO_Init / MX_EXTI_Init）
 - clock.h / clock.c: 系统时钟树配置（MX_Clock_Init，SYSCLK/AHB/APB1/APB2/ADC）
+<% if (hasUsart) { -%>
+- usart.h / usart.c: 串口初始化（MX_USARTx_Init）
+<% } -%>
+<% if (hasAdc) { -%>
+- adc.h / adc.c: ADC 初始化（MX_ADCx_Init）
+<% } -%>
 - app_it.c: EXTI 中断服务函数骨架（仅在启用了外部中断时生成）
 - project.json: 本次配置的工程文件，可重新导入 MCUCubeMX
 
@@ -244,10 +384,21 @@ export const README_TEMPLATE = `# MCUCubeMX 生成结果
 2. 将 clock.h / clock.c 加入工程，并在 main 启动后调用 MX_Clock_Init()
    覆盖固件库 system 文件中的默认时钟；若固件库 system 文件已在
    SystemInit 中配置了相同时钟，可跳过调用。
+<% if (hasUsart || hasAdc) { -%>
+3. 将 usart.h/usart.c、adc.h/adc.c 加入工程，并在 main 中调用对应的
+   MX_USARTx_Init() / MX_ADCx_Init()。
+<% } -%>
+<% if (hasUsart || hasAdc) { -%>
+4. 若生成了 app_it.c：如工程已有 gd32l23x_it.c，请删除其中对应的 EXTI
+   handler（EXTI0_IRQHandler、EXTI5_9_IRQHandler、EXTI10_15_IRQHandler 等），
+   再将 app_it.c 加入编译；否则直接加入编译即可。
+5. 在 app_it.c 的 USER CODE 区段内编写实际的中断处理逻辑。
+<% } else { -%>
 3. 若生成了 app_it.c：如工程已有 gd32l23x_it.c，请删除其中对应的 EXTI
    handler（EXTI0_IRQHandler、EXTI5_9_IRQHandler、EXTI10_15_IRQHandler 等），
    再将 app_it.c 加入编译；否则直接加入编译即可。
 4. 在 app_it.c 的 USER CODE 区段内编写实际的中断处理逻辑。
+<% } -%>
 
 ## 引脚配置
 

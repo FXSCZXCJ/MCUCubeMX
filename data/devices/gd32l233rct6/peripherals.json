@@ -1,0 +1,98 @@
+{
+  "device": "GD32L233RCT6",
+  "source": "GD32L23x 标准外设库 V2.4.0（gd32l23x_usart/adc）+ 用户手册 Rev2.4",
+  "usart": [
+    {
+      "id": "USART0",
+      "label": "USART0",
+      "afPrefix": "USART0",
+      "periphMacro": "USART0",
+      "clockEnable": "RCU_USART0",
+      "clockSourceApi": "rcu_usart_clock_config",
+      "clockSourceIdx": "IDX_USART0",
+      "defaultClockSource": "APB2",
+      "clockSources": [
+        { "key": "APB2", "label": "APB2 总线时钟", "macro": "RCU_USARTSRC_CKAPB" },
+        { "key": "SYSCLK", "label": "系统时钟 SYSCLK", "macro": "RCU_USARTSRC_CKSYS" },
+        { "key": "LXTAL", "label": "低速外部晶振 LXTAL", "macro": "RCU_USARTSRC_LXTAL" },
+        { "key": "IRC16MDIV", "label": "IRC16M 分频", "macro": "RCU_USARTSRC_IRC16MDIV" }
+      ]
+    },
+    {
+      "id": "USART1",
+      "label": "USART1",
+      "afPrefix": "USART1",
+      "periphMacro": "USART1",
+      "clockEnable": "RCU_USART1",
+      "clockSourceApi": "rcu_usart_clock_config",
+      "clockSourceIdx": "IDX_USART1",
+      "defaultClockSource": "APB1",
+      "clockSources": [
+        { "key": "APB1", "label": "APB1 总线时钟", "macro": "RCU_USARTSRC_CKAPB" },
+        { "key": "SYSCLK", "label": "系统时钟 SYSCLK", "macro": "RCU_USARTSRC_CKSYS" },
+        { "key": "LXTAL", "label": "低速外部晶振 LXTAL", "macro": "RCU_USARTSRC_LXTAL" },
+        { "key": "IRC16MDIV", "label": "IRC16M 分频", "macro": "RCU_USARTSRC_IRC16MDIV" }
+      ]
+    },
+    {
+      "id": "UART3",
+      "label": "UART3",
+      "afPrefix": "UART3",
+      "periphMacro": "UART3",
+      "clockEnable": "RCU_UART3",
+      "defaultClockSource": "APB1"
+    },
+    {
+      "id": "UART4",
+      "label": "UART4",
+      "afPrefix": "UART4",
+      "periphMacro": "UART4",
+      "clockEnable": "RCU_UART4",
+      "defaultClockSource": "APB1"
+    }
+  ],
+  "adc": [
+    {
+      "id": "ADC0",
+      "label": "ADC",
+      "afPrefix": "ADC",
+      "periphArg": null,
+      "clockEnable": "RCU_ADC",
+      "channelFunction": "adc_routine_channel_config",
+      "groupMacro": "ADC_ROUTINE_CHANNEL",
+      "extTriggerPrefix": "ADC_EXTTRIG_ROUTINE_",
+      "resolutions": [
+        { "label": "12 位", "macro": "ADC_RESOLUTION_12B" },
+        { "label": "10 位", "macro": "ADC_RESOLUTION_10B" },
+        { "label": "8 位", "macro": "ADC_RESOLUTION_8B" },
+        { "label": "6 位", "macro": "ADC_RESOLUTION_6B" }
+      ],
+      "dataAlignments": [
+        { "label": "右对齐", "macro": "ADC_DATAALIGN_RIGHT" },
+        { "label": "左对齐", "macro": "ADC_DATAALIGN_LEFT" }
+      ],
+      "sampleTimes": [
+        { "label": "7.5 周期", "macro": "ADC_SAMPLETIME_7POINT5" },
+        { "label": "13.5 周期", "macro": "ADC_SAMPLETIME_13POINT5" },
+        { "label": "28.5 周期", "macro": "ADC_SAMPLETIME_28POINT5" },
+        { "label": "41.5 周期", "macro": "ADC_SAMPLETIME_41POINT5" },
+        { "label": "55.5 周期", "macro": "ADC_SAMPLETIME_55POINT5" },
+        { "label": "71.5 周期", "macro": "ADC_SAMPLETIME_71POINT5" },
+        { "label": "239.5 周期", "macro": "ADC_SAMPLETIME_239POINT5" }
+      ],
+      "externalTriggers": [
+        { "label": "软件触发", "macro": "ADC_EXTTRIG_ROUTINE_NONE" },
+        { "label": "TIMER8 CH0", "macro": "ADC_EXTTRIG_ROUTINE_T8_CH0" },
+        { "label": "TIMER1 CH1", "macro": "ADC_EXTTRIG_ROUTINE_T1_CH1" },
+        { "label": "TIMER2 TRGO", "macro": "ADC_EXTTRIG_ROUTINE_T2_TRGO" },
+        { "label": "EXTI 线 11", "macro": "ADC_EXTTRIG_ROUTINE_EXTI_11" }
+      ],
+      "defaults": {
+        "resolution": "ADC_RESOLUTION_12B",
+        "dataAlignment": "ADC_DATAALIGN_RIGHT",
+        "sampleTime": "ADC_SAMPLETIME_13POINT5",
+        "externalTrigger": "ADC_EXTTRIG_ROUTINE_NONE"
+      }
+    }
+  ]
+}

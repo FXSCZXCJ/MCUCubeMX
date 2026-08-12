@@ -88,6 +88,73 @@ export interface ProjectConfig {
   naming: { prefix: string }
   /** 时钟树配置（Phase 2；旧配置缺省时使用器件默认值） */
   clock?: ClockConfig
+  /** 外设实例配置（Phase 3：USART/ADC 等），key 为实例 id（如 USART0 / ADC0） */
+  peripherals?: Record<string, PeripheralConfig>
+}
+
+/* ==================== 外设配置（Phase 3） ==================== */
+
+export interface PeripheralConfig {
+  enabled: boolean
+  params: Record<string, string | number | boolean>
+}
+
+export interface UsartClockSourceSpec {
+  key: string
+  label: string
+  macro: string
+}
+
+export interface UsartPeriphSpec {
+  id: string
+  label: string
+  /** AF 信号前缀，如 USART0 → USART0_TX */
+  afPrefix: string
+  /** 固件库外设宏，如 USART0 */
+  periphMacro: string
+  /** 外设时钟使能宏，如 RCU_USART0 */
+  clockEnable: string
+  /** 可选：外设时钟源配置 API（仅 L23x USART0/1 等） */
+  clockSourceApi?: string
+  clockSourceIdx?: string
+  defaultClockSource: string
+  clockSources: UsartClockSourceSpec[]
+}
+
+export interface PeripheralOptionSpec {
+  label: string
+  macro: string
+}
+
+export interface AdcPeriphSpec {
+  id: string
+  label: string
+  /** ANALOG 功能前缀（如 ADC / ADC012） */
+  afPrefix: string
+  /** ADC 外设参数（F4xx 为 ADC0/ADC1/ADC2；L23x 单 ADC 为 null） */
+  periphArg: string | null
+  clockEnable: string
+  /** 常规通道配置函数名（L23x adc_routine_channel_config / F4xx adc_regular_channel_config） */
+  channelFunction: string
+  groupMacro: string
+  extTriggerPrefix: string
+  resolutions: PeripheralOptionSpec[]
+  dataAlignments: PeripheralOptionSpec[]
+  sampleTimes: PeripheralOptionSpec[]
+  externalTriggers: PeripheralOptionSpec[]
+  defaults: {
+    resolution: string
+    dataAlignment: string
+    sampleTime: string
+    externalTrigger: string
+  }
+}
+
+export interface PeripheralSpec {
+  device: string
+  source: string
+  usart: UsartPeriphSpec[]
+  adc: AdcPeriphSpec[]
 }
 
 /* ==================== 时钟树（Phase 2） ==================== */

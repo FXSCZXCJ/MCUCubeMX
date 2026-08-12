@@ -1,15 +1,27 @@
 import * as ejs from 'ejs'
 import JSZip from 'jszip'
-import type { ClockConfig, ClockSpec, GeneratedFile, PinAssignment, PinDef, ProjectConfig } from '../../types'
+import type {
+  ClockConfig,
+  ClockSpec,
+  GeneratedFile,
+  PinAssignment,
+  PinDef,
+  ProjectConfig,
+} from '../../types'
 import type { DeviceData } from '../../data/device'
 import { mergeClockConfig, validateClock } from '../clock'
+import { derivePeripheralState, peripheralConfig } from '../peripherals'
 import {
+  ADC_C_TEMPLATE,
+  ADC_H_TEMPLATE,
   APP_IT_C_TEMPLATE,
   CLOCK_C_TEMPLATE,
   CLOCK_H_TEMPLATE,
   GPIO_C_TEMPLATE,
   GPIO_H_TEMPLATE,
   README_TEMPLATE,
+  USART_C_TEMPLATE,
+  USART_H_TEMPLATE,
 } from './templates'
 
 export function sanitizeLabel(label: string): string {
@@ -88,6 +100,46 @@ interface ClockContext {
   adcMhz: number
 }
 
+interface UsartOut {
+  id: string
+  periphMacro: string
+  clockEnable: string
+  baudrate: number
+  wordLength: string
+  stopBits: string
+  parity: string
+  flowRts: string
+  flowCts: string
+  txConfig: string
+  rxConfig: string
+  clockSourceCall: string | null
+  clockSourceLabel: string
+  pinsText: string
+}
+
+interface AdcChannelOut {
+  rank: number
+  channelMacro: string
+}
+
+interface AdcOut {
+  id: string
+  clockEnable: string
+  argMulti: string
+  argSingle: string
+  resolution: string
+  dataAlignment: string
+  groupMacro: string
+  channelFunction: string
+  channelCount: number
+  channels: AdcChannelOut[]
+  sampleTime: string
+  triggerMacro: string
+  triggerEnabled: boolean
+  scanMode: boolean
+  channelsText: string
+}
+
 function fillMacro(tpl: string, token: string, value: number | string): string {
   return tpl.replace(new RegExp(`<${token}>`, 'g'), String(value))
 }
@@ -156,6 +208,99 @@ function buildClockContext(config: ProjectConfig, deviceData: DeviceData): Clock
 
 function round(v: number | null): number {
   return Math.round((v ?? 0) * 1000) / 1000
+}
+
+function buildUsartOut(config: ProjectConfig, deviceData: DeviceData): UsartOut[] {
+  const derived = derivePeripheralState(config, deviceData)
+  const out: UsartOut[] = []
+  for (const u of derived.usart) {
+    if (!u.inUse) continue
+    const cfg = peripheralConfig(deviceData, u.id, config.peripherals)
+    if (!cfg?.enabled) continue
+    const p = cfg.params
+    const fc = String(p.flowControl ?? 'NONE')
+    const flowRts = fc === 'RTS' || fc === 'RTS_CTS' ? 'USART_RTS_ENABLE' : 'USART_RTS_DISABLE'
+    const flowCts = fc === 'CTS' || fc === 'RTS_CTS' ? 'USART_CTS_ENABLE' : 'USART_CTS_DISABLE'
+    let clockSourceCall: string | null = null
+    let clockSourceLabel = ''
+    if (u.spec.clockSourceApi) {
+      const src = String(p.clockSource ?? u.spec.defaultClockSource)
+      const cs = u.spec.clockSources.find((c) => c.key === src)
+      if (cs) {
+        clockSourceCall = `${u.spec.clockSourceApi}(${u.spec.clockSourceIdx}, ${cs.macro})`
+        clockSourceLabel = cs.label
+      }
+    }
+    out.push({
+      id: u.id,
+      periphMacro: u.spec.periphMacro,
+      clockEnable: u.spec.clockEnable,
+      baudrate: Number(p.baudrate ?? 115200),
+      wordLength: String(p.wordLength ?? 'USART_WL_8BIT'),
+      stopBits: String(p.stopBits ?? 'USART_STB_1BIT'),
+      parity: String(p.parity ?? 'USART_PM_NONE'),
+      flowRts,
+      flowCts,
+      txConfig: u.txPin ? 'USART_TRANSMIT_ENABLE' : 'USART_TRANSMIT_DISABLE',
+      rxConfig: u.rxPin ? 'USART_RECEIVE_ENABLE' : 'USART_RECEIVE_DISABLE',
+      clockSourceCall,
+      clockSourceLabel,
+      pinsText: u.signals.map((s) => `${s.signal}(${s.pin})`).join(', '),
+    })
+  }
+  return out
+}
+
+function buildAdcOut(config: ProjectConfig, deviceData: DeviceData): AdcOut[] {
+  const derived = derivePeripheralState(config, deviceData)
+  const out: AdcOut[] = []
+  for (const a of derived.adc) {
+    if (!a.inUse) continue
+    const cfg = peripheralConfig(deviceData, a.id, config.peripherals)
+    if (!cfg?.enabled) continue
+    const p = cfg.params
+    const spec = a.spec
+    const triggerMacro = String(p.externalTrigger ?? spec.defaults.externalTrigger)
+    out.push({
+      id: a.id,
+      clockEnable: spec.clockEnable,
+      argMulti: spec.periphArg ? `${spec.periphArg}, ` : '',
+      argSingle: spec.periphArg ?? '',
+      resolution: String(p.resolution ?? spec.defaults.resolution),
+      dataAlignment: String(p.dataAlignment ?? spec.defaults.dataAlignment),
+      groupMacro: spec.groupMacro,
+      channelFunction: spec.channelFunction,
+      channelCount: a.channels.length,
+      channels: a.channels.map((ch, i) => ({
+        rank: i + 1,
+        channelMacro: `ADC_CHANNEL_${ch.channel}`,
+      })),
+      sampleTime: String(p.sampleTime ?? spec.defaults.sampleTime),
+      triggerMacro,
+      triggerEnabled: !triggerMacro.endsWith('_NONE'),
+      scanMode: a.channels.length > 1,
+      channelsText: a.channels.map((ch) => `IN${ch.channel}(${ch.pin})`).join(', '),
+    })
+  }
+  return out
+}
+
+/** 生成 main.c 需要调用的外设初始化函数名 */
+export function peripheralInitCalls(config: ProjectConfig, deviceData: DeviceData): string[] {
+  const prefix = config.naming.prefix || 'MX_'
+  const derived = derivePeripheralState(config, deviceData)
+  const calls: string[] = []
+  for (const u of derived.usart) {
+    if (u.inUse && peripheralConfig(deviceData, u.id, config.peripherals)?.enabled) {
+      calls.push(`${prefix}${u.id}_Init();`)
+    }
+  }
+  for (const a of derived.adc) {
+    if (a.inUse && peripheralConfig(deviceData, a.id, config.peripherals)?.enabled) {
+      calls.push(`${prefix}${a.id}_Init();`)
+    }
+  }
+  return calls
 }
 
 function prepare(config: ProjectConfig, deviceData: DeviceData): {
@@ -271,6 +416,10 @@ export function generateProject(config: ProjectConfig, deviceData: DeviceData): 
   const hasExti = extiPins.length > 0
   const fw = deviceData.device.firmware
   const clockCtx = buildClockContext(config, deviceData)
+  const usartOut = buildUsartOut(config, deviceData)
+  const adcOut = buildAdcOut(config, deviceData)
+  const hasUsart = usartOut.length > 0
+  const hasAdc = adcOut.length > 0
 
   const groupMap = new Map<string, { label: string; macroPin: string; macroPort: string }[]>()
   for (const p of prepared) {
@@ -335,6 +484,30 @@ export function generateProject(config: ProjectConfig, deviceData: DeviceData): 
       path: 'clock.c',
       content: render(CLOCK_C_TEMPLATE, clockCtx),
     },
+    ...(hasUsart
+      ? [
+          {
+            path: 'usart.h',
+            content: render(USART_H_TEMPLATE, { device: config.device, includeHeader: fw.header, prefix, usarts: usartOut }),
+          },
+          {
+            path: 'usart.c',
+            content: render(USART_C_TEMPLATE, { device: config.device, prefix, usarts: usartOut }),
+          },
+        ]
+      : []),
+    ...(hasAdc
+      ? [
+          {
+            path: 'adc.h',
+            content: render(ADC_H_TEMPLATE, { device: config.device, includeHeader: fw.header, prefix, adcs: adcOut }),
+          },
+          {
+            path: 'adc.c',
+            content: render(ADC_C_TEMPLATE, { device: config.device, prefix, adcs: adcOut }),
+          },
+        ]
+      : []),
     {
       path: 'project.json',
       content: JSON.stringify(config, null, 2) + '\n',
@@ -345,6 +518,8 @@ export function generateProject(config: ProjectConfig, deviceData: DeviceData): 
         device: config.device,
         date: new Date().toISOString(),
         config,
+        hasUsart,
+        hasAdc,
       }),
     },
   ]

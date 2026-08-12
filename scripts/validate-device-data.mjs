@@ -17,6 +17,7 @@ for (const dev of devices) {
   const af = read('af.json')
   const exti = read('exti.json')
   const clock = read('clock.json')
+  const periph = read('peripherals.json')
   const fail = (msg) => errors.push(`[${dev}] ${msg}`)
   const pins = pkg.pins
   const pinsPerSide = pkg.pinsPerSide
@@ -91,6 +92,53 @@ for (const dev of devices) {
     fail('缺少 clock.json')
   } else {
     validateClockData(clock, fail)
+  }
+  validatePeripheralData(periph, fail)
+}
+
+function validatePeripheralData(periph, fail) {
+  if (!periph || typeof periph !== 'object') return fail('缺少 peripherals.json')
+  if (!Array.isArray(periph.usart) || !Array.isArray(periph.adc)) {
+    return fail('peripherals.json 需要 usart/adc 数组')
+  }
+  const ids = new Set()
+  for (const u of periph.usart) {
+    if (!u.id || !u.afPrefix || !u.periphMacro || !u.clockEnable) {
+      fail(`peripherals.usart 缺少字段: ${JSON.stringify(u)}`)
+      continue
+    }
+    if (ids.has(u.id)) fail(`peripherals.usart 重复 id ${u.id}`)
+    ids.add(u.id)
+    if (u.clockSourceApi) {
+      if (!u.clockSourceIdx || !Array.isArray(u.clockSources) || u.clockSources.length === 0) {
+        fail(`${u.id} 时钟源配置不完整（api/idx/clockSources）`)
+      }
+      if (!u.defaultClockSource) fail(`${u.id} 缺少 defaultClockSource`)
+      for (const c of u.clockSources ?? []) {
+        if (!c.key || !c.label || !c.macro) fail(`${u.id} clockSources 条目非法`)
+      }
+    }
+  }
+  for (const a of periph.adc) {
+    if (!a.id || !a.afPrefix || !a.clockEnable || !a.channelFunction || !a.groupMacro) {
+      fail(`peripherals.adc 缺少字段: ${JSON.stringify(a)}`)
+      continue
+    }
+    if (ids.has(a.id)) fail(`peripherals.adc 重复 id ${a.id}`)
+    ids.add(a.id)
+    for (const k of ['resolutions', 'dataAlignments', 'sampleTimes', 'externalTriggers']) {
+      if (!Array.isArray(a[k]) || a[k].length === 0) {
+        fail(`${a.id} ${k} 不能为空`)
+      } else {
+        for (const o of a[k]) {
+          if (!o.label || !o.macro) fail(`${a.id} ${k} 条目非法`)
+        }
+      }
+    }
+    const d = a.defaults
+    if (!d || ![d.resolution, d.dataAlignment, d.sampleTime, d.externalTrigger].every(Boolean)) {
+      fail(`${a.id} defaults 不完整`)
+    }
   }
 }
 
@@ -247,6 +295,6 @@ for (const dev of devices) {
   const af = JSON.parse(readFileSync(path.join(devicesDir, dev, 'af.json'), 'utf8'))
   const exti = JSON.parse(readFileSync(path.join(devicesDir, dev, 'exti.json'), 'utf8'))
   console.log(
-    `OK: ${pkg.device} ${pkg.package} | ${pkg.pins.length} pins | ${af.entries.length} AF entries | ${exti.entries.length} EXTI entries | clock 源=${JSON.parse(readFileSync(path.join(devicesDir, dev, 'clock.json'), 'utf8')).sources.length}`,
+    `OK: ${pkg.device} ${pkg.package} | ${pkg.pins.length} pins | ${af.entries.length} AF entries | ${exti.entries.length} EXTI entries | clock 源=${JSON.parse(readFileSync(path.join(devicesDir, dev, 'clock.json'), 'utf8')).sources.length} | periph usart/adc=${JSON.parse(readFileSync(path.join(devicesDir, dev, 'peripherals.json'), 'utf8')).usart.length}/${JSON.parse(readFileSync(path.join(devicesDir, dev, 'peripherals.json'), 'utf8')).adc.length}`,
   )
 }

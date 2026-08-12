@@ -1,5 +1,6 @@
 import type { Conflict, PinAssignment, ProjectConfig } from '../../types'
 import type { DeviceData } from '../../data/device'
+import { derivePeripheralState } from '../peripherals'
 
 const BLOCKED_SPECIALS = ['nrst', 'boot', 'swd']
 
@@ -142,6 +143,41 @@ export function checkConflicts(
         code: 'ANALOG_DUPLICATE',
         message: `${pins.join(' / ')} 重复使用模拟通道 ${signal}（同一模拟通道只能分配一次）`,
         pins,
+      })
+    }
+  }
+
+  // 外设实例完整性（USART TX/RX 配对、时钟源合法性）
+  const periph = derivePeripheralState(config, deviceData)
+  for (const u of periph.usart) {
+    if (!u.inUse) continue
+    if (u.txPin && !u.rxPin) {
+      conflicts.push({
+        severity: 'warning',
+        code: 'USART_RX_MISSING',
+        message: `${u.id} 仅配置了 TX（${u.txPin}），未配置 RX；若只发送可忽略此警告`,
+        pins: [u.txPin],
+      })
+    }
+    if (u.rxPin && !u.txPin) {
+      conflicts.push({
+        severity: 'warning',
+        code: 'USART_TX_MISSING',
+        message: `${u.id} 仅配置了 RX（${u.rxPin}），未配置 TX；若只接收可忽略此警告`,
+        pins: [u.rxPin],
+      })
+    }
+    const storedSource = config.peripherals?.[u.id]?.params?.clockSource
+    if (
+      u.spec.clockSourceApi &&
+      typeof storedSource === 'string' &&
+      !u.spec.clockSources.some((c) => c.key === storedSource)
+    ) {
+      conflicts.push({
+        severity: 'error',
+        code: 'PERIPHERAL_CLOCK_INVALID',
+        message: `${u.id} 时钟源 ${storedSource} 不受该器件支持`,
+        pins: u.signals.map((s) => s.pin),
       })
     }
   }
