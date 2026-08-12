@@ -21,6 +21,7 @@ import type { ProjectConfig } from './types'
 const store = useProjectStore()
 const codegenVisible = ref(false)
 const viewMode = ref<'gpio' | 'clock'>('gpio')
+const svgCollapsed = ref(false)
 const jlcVisible = ref(false)
 const jlcAction = ref<'sync' | 'import' | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -104,6 +105,9 @@ async function clearAll() {
           <el-radio-button value="gpio">GPIO</el-radio-button>
           <el-radio-button value="clock">时钟</el-radio-button>
         </el-radio-group>
+        <el-button size="small" @click="svgCollapsed = !svgCollapsed">
+          {{ svgCollapsed ? '展开左栏' : '折叠左栏' }}
+        </el-button>
         <el-input
           v-model="store.projectName"
           size="small"
@@ -136,9 +140,9 @@ async function clearAll() {
       </div>
     </header>
 
-    <main class="app-main">
+    <main class="app-main" :class="{ collapsed: svgCollapsed }">
       <template v-if="viewMode === 'gpio'">
-        <section class="svg-pane">
+        <section v-show="!svgCollapsed" class="svg-pane">
           <PackageView />
         </section>
         <aside class="config-pane">
@@ -165,7 +169,7 @@ async function clearAll() {
         </aside>
       </template>
       <template v-else>
-        <section class="svg-pane">
+        <section v-show="!svgCollapsed" class="svg-pane">
           <ClockTreeView />
         </section>
         <aside class="config-pane">
@@ -235,6 +239,9 @@ async function clearAll() {
   gap: 14px;
   padding: 12px 18px;
   overflow: hidden;
+}
+.app-main.collapsed {
+  grid-template-columns: 1fr;
 }
 .svg-pane {
   min-width: 0;
