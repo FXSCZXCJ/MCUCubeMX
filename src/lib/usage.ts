@@ -30,6 +30,15 @@ export interface ProjectUsage {
   gpio: GpioUsage[]
 }
 
+export interface ExtiLineAllocation {
+  line: number
+  irq: string
+  enabled: boolean
+  pin: string | null
+  label: string
+  edge: string
+}
+
 const SHORT_IO = new Set([
   'TX',
   'RX',
@@ -50,6 +59,48 @@ const SHORT_IO = new Set([
 ])
 
 const IGNORED_AF = new Set(['EVENTOUT'])
+
+export const EXTI_EDGE_TEXT: Record<string, string> = {
+  RISING: '上升沿',
+  FALLING: '下降沿',
+  BOTH: '双边沿',
+}
+
+/** EXTI 线 → 中断分组名 */
+export function extiIrqOf(line: number): string {
+  return line <= 4 ? `EXTI${line}` : line <= 9 ? 'EXTI5_9' : 'EXTI10_15'
+}
+
+/** 全部 16 条 EXTI 中断线的分配情况（0~15，含未分配） */
+export function extiAllocations(
+  config: ProjectConfig,
+  deviceData: DeviceData,
+): ExtiLineAllocation[] {
+  const byLine = new Map<number, { pin: string; label: string; edge: string }>()
+  for (const a of config.pins) {
+    const pinDef = deviceData.lookup.findPin(a.pin)
+    if (!pinDef || a.mode !== 'INPUT' || !a.params.exti?.enabled) continue
+    const name = pinDef.name.toUpperCase()
+    byLine.set(deviceData.lookup.pinIndex(name), {
+      pin: name,
+      label: a.label ?? '',
+      edge: EXTI_EDGE_TEXT[a.params.exti.edge] ?? a.params.exti.edge,
+    })
+  }
+  const result: ExtiLineAllocation[] = []
+  for (let line = 0; line < 16; line++) {
+    const hit = byLine.get(line)
+    result.push({
+      line,
+      irq: extiIrqOf(line),
+      enabled: !!hit,
+      pin: hit?.pin ?? null,
+      label: hit?.label ?? '',
+      edge: hit?.edge ?? '',
+    })
+  }
+  return result
+}
 
 /** 外设信号短名：USART1_TX → TX；TIMER1_CH2 → TIMER1_CH2 */
 export function shortSignal(signal: string): string {

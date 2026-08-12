@@ -6,6 +6,7 @@ import PinTable from './components/PinTable.vue'
 import PinConfigPanel from './components/PinConfigPanel.vue'
 import ConflictsPanel from './components/ConflictsPanel.vue'
 import PeripheralUsagePanel from './components/PeripheralUsagePanel.vue'
+import ExtiAllocationPanel from './components/ExtiAllocationPanel.vue'
 import GroupsPanel from './components/GroupsPanel.vue'
 import CodegenDialog from './components/CodegenDialog.vue'
 import ClockTreeView from './components/ClockTreeView.vue'
@@ -151,6 +152,10 @@ async function clearAll() {
           <div class="panel">
             <div class="panel-title">外设使用情况</div>
             <PeripheralUsagePanel />
+          </div>
+          <div class="panel">
+            <div class="panel-title">中断线分配</div>
+            <ExtiAllocationPanel />
           </div>
           <div class="panel">
             <div class="panel-title">引脚分组</div>

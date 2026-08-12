@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deriveUsage, shortSignal } from '../src/lib/usage'
+import { deriveUsage, extiAllocations, extiIrqOf, shortSignal } from '../src/lib/usage'
 import { devices } from '../src/data/device'
 import type { ProjectConfig } from '../src/types'
 
@@ -60,5 +60,39 @@ describe('外设使用情况推导', () => {
       dd,
     )
     expect(usage.peripherals).toHaveLength(0)
+  })
+})
+
+describe('中断线分配列表', () => {
+  it('返回 16 条 EXTI 线且分组正确', () => {
+    const alloc = extiAllocations(config([]), dd)
+    expect(alloc).toHaveLength(16)
+    expect(alloc[0].irq).toBe('EXTI0')
+    expect(alloc[5].irq).toBe('EXTI5_9')
+    expect(alloc[10].irq).toBe('EXTI10_15')
+    expect(alloc[15].irq).toBe('EXTI10_15')
+    expect(extiIrqOf(4)).toBe('EXTI4')
+    expect(extiIrqOf(9)).toBe('EXTI5_9')
+    expect(alloc.every((a) => !a.enabled && a.pin === null)).toBe(true)
+  })
+
+  it('已分配的线显示引脚/标签/触发边沿', () => {
+    const alloc = extiAllocations(
+      config([
+        { pin: 'PA0', mode: 'INPUT', label: 'WU', params: { exti: { enabled: true, edge: 'BOTH' } } },
+        { pin: 'PC13', mode: 'INPUT', label: 'KEY_USER', params: { exti: { enabled: true, edge: 'FALLING' } } },
+        { pin: 'PA5', mode: 'OUTPUT', params: {} },
+      ]),
+      dd,
+    )
+    expect(alloc[0]).toMatchObject({
+      line: 0,
+      enabled: true,
+      pin: 'PA0',
+      label: 'WU',
+      edge: '双边沿',
+    })
+    expect(alloc[13]).toMatchObject({ enabled: true, pin: 'PC13', label: 'KEY_USER', edge: '下降沿' })
+    expect(alloc[5].enabled).toBe(false)
   })
 })
