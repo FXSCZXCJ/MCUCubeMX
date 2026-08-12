@@ -32,5 +32,15 @@
       }
     }
   ],
-  "naming": { "prefix": "MX_" }
+  "naming": { "prefix": "MX_" },
+  "clock": {
+    "source": "PLL",
+    "hxtalMhz": 8,
+    "pllSource": "IRC16M",
+    "pll": { "mul": 4 },
+    "ahb": 1,
+    "apb1": 2,
+    "apb2": 1,
+    "adc": "APB2_DIV4"
+  }
 }

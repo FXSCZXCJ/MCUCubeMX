@@ -88,6 +88,7 @@ if (isL23x) {
     path.join(spSrc, 'gd32l23x_exti.c'),
     path.join(spSrc, 'gd32l23x_misc.c'),
     path.join(spSrc, 'gd32l23x_rcu.c'),
+    path.join(spSrc, 'gd32l23x_adc.c'),
   ]
 } else {
   const cmsis = path.join(firmwareDir, 'cmsis', 'gd', 'gd32f4xx', 'include')
@@ -102,11 +103,13 @@ if (isL23x) {
     path.join(spSrc, 'gd32f4xx_exti.c'),
     path.join(spSrc, 'gd32f4xx_misc.c'),
     path.join(spSrc, 'gd32f4xx_rcu.c'),
+    path.join(spSrc, 'gd32f4xx_adc.c'),
+    path.join(spSrc, 'gd32f4xx_pmu.c'),
   ]
 }
 
 const compiled = [startup, ...sources]
-for (const f of ['gpio.c', 'app_it.c', 'main.c']) {
+for (const f of ['gpio.c', 'clock.c', 'app_it.c', 'main.c']) {
   const p = path.join(outDir, f)
   if (existsSync(p)) compiled.push(p)
 }

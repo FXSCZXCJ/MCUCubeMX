@@ -23,8 +23,15 @@ describe('代码生成 GD32L233RCT6 (sample-project)', () => {
 
   it('生成完整文件集', () => {
     expect(files.map((f) => f.path).sort()).toEqual(
-      ['README.md', 'app_it.c', 'gpio.c', 'gpio.h', 'project.json'].sort(),
+      ['README.md', 'app_it.c', 'clock.c', 'clock.h', 'gpio.c', 'gpio.h', 'project.json'].sort(),
     )
+  })
+
+  it('生成 clock.h/clock.c', () => {
+    expect(file(files, 'clock.h')).toContain('void MX_Clock_Init(void);')
+    const c = file(files, 'clock.c')
+    expect(c).toContain('rcu_system_clock_source_config')
+    expect(c).toContain('SYSCLK=64MHz')
   })
 
   it('gpio.h 包含按组别的宏定义', () => {

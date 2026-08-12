@@ -1,8 +1,16 @@
 import * as ejs from 'ejs'
 import JSZip from 'jszip'
-import type { GeneratedFile, PinAssignment, PinDef, ProjectConfig } from '../../types'
+import type { ClockConfig, ClockSpec, GeneratedFile, PinAssignment, PinDef, ProjectConfig } from '../../types'
 import type { DeviceData } from '../../data/device'
-import { APP_IT_C_TEMPLATE, GPIO_C_TEMPLATE, GPIO_H_TEMPLATE, README_TEMPLATE } from './templates'
+import { mergeClockConfig, validateClock } from '../clock'
+import {
+  APP_IT_C_TEMPLATE,
+  CLOCK_C_TEMPLATE,
+  CLOCK_H_TEMPLATE,
+  GPIO_C_TEMPLATE,
+  GPIO_H_TEMPLATE,
+  README_TEMPLATE,
+} from './templates'
 
 export function sanitizeLabel(label: string): string {
   const s = label
@@ -51,6 +59,103 @@ interface AfOutPin extends OutPin {
 
 interface AnalogOutPin extends OutPin {
   func: string
+}
+
+interface ClockContext {
+  device: string
+  includeHeader: string
+  systemBase: string
+  prefix: string
+  oscOnMacro: string
+  usePll: boolean
+  pllOscMacro: string
+  pllCall: string
+  pllComment: string
+  ahbMacro: string
+  apb1Macro: string
+  apb2Macro: string
+  adcApi: string | null
+  adcArg: string | null
+  adcInclude: string | null
+  sysclkSourceMacro: string
+  nvicPriorityGroupMacro: string | null
+  highDrive: boolean
+  highDriveMhz: number
+  sysclkMhz: number
+  ahbMhz: number
+  apb1Mhz: number
+  apb2Mhz: number
+  adcMhz: number
+}
+
+function fillMacro(tpl: string, token: string, value: number | string): string {
+  return tpl.replace(new RegExp(`<${token}>`, 'g'), String(value))
+}
+
+function buildClockContext(config: ProjectConfig, deviceData: DeviceData): ClockContext {
+  const spec: ClockSpec = deviceData.clockSpec
+  const clock: ClockConfig = mergeClockConfig(spec, config.clock)
+  const validation = validateClock(spec, clock)
+  const chain = validation.chain
+  const usePll = clock.source === 'PLL'
+  const fw = deviceData.device.firmware
+
+  let pllCall = ''
+  let pllComment = ''
+  if (usePll) {
+    const api = spec.codegen.pllApi
+    const args = api.args.map((a) => {
+      if (a === 'src') return spec.codegen.pllSrc[clock.pllSource]
+      const v = clock.pll[a]
+      if (a === 'mul' && api.mulMacro) return fillMacro(api.mulMacro, 'mul', v)
+      return String(v)
+    })
+    pllCall = `${api.name}(${args.join(', ')})`
+    const srcLabel = spec.sources.find((s) => s.id === clock.pllSource)?.label ?? clock.pllSource
+    const mul = clock.pll.mul
+    pllComment =
+      chain.vcoMhz !== null
+        ? `${srcLabel} ${round(chain.pllInMhz)}MHz → VCO ${round(chain.vcoMhz)}MHz → ${round(chain.pllOutMhz)}MHz`
+        : `${srcLabel} × ${mul} = ${round(chain.pllOutMhz)}MHz`
+  }
+
+  const adcCodegen = spec.adc.codegen
+  const highDriveMhz = spec.codegen.highDriveMhz ?? 0
+  // 需要先使能并等待的振荡器：PLL 作为系统源时为其输入源，否则为系统源本身
+  const oscOnMacro = usePll
+    ? spec.codegen.oscEnum[clock.pllSource]
+    : spec.codegen.oscEnum[clock.source]
+
+  return {
+    device: config.device,
+    includeHeader: fw.header,
+    systemBase: fw.header.replace(/\.h$/, ''),
+    prefix: config.naming.prefix || 'MX_',
+    oscOnMacro,
+    usePll,
+    pllOscMacro: spec.codegen.oscEnum.PLL,
+    pllCall,
+    pllComment,
+    ahbMacro: fillMacro(spec.codegen.prescaler.ahb, 'div', clock.ahb),
+    apb1Macro: fillMacro(spec.codegen.prescaler.apb1, 'div', clock.apb1),
+    apb2Macro: fillMacro(spec.codegen.prescaler.apb2, 'div', clock.apb2),
+    adcApi: adcCodegen?.api ?? null,
+    adcArg: adcCodegen ? fillMacro(adcCodegen.argMacro, 'id', clock.adc) : null,
+    adcInclude: adcCodegen?.include ?? null,
+    sysclkSourceMacro: spec.codegen.sysclkSource[clock.source],
+    nvicPriorityGroupMacro: spec.codegen.nvicPriorityGroupMacro ?? null,
+    highDrive: highDriveMhz > 0 && chain.sysclkMhz > highDriveMhz,
+    highDriveMhz,
+    sysclkMhz: round(chain.sysclkMhz),
+    ahbMhz: round(chain.ahbMhz),
+    apb1Mhz: round(chain.apb1Mhz),
+    apb2Mhz: round(chain.apb2Mhz),
+    adcMhz: round(chain.adcMhz),
+  }
+}
+
+function round(v: number | null): number {
+  return Math.round((v ?? 0) * 1000) / 1000
 }
 
 function prepare(config: ProjectConfig, deviceData: DeviceData): {
@@ -165,6 +270,7 @@ export function generateProject(config: ProjectConfig, deviceData: DeviceData): 
   )
   const hasExti = extiPins.length > 0
   const fw = deviceData.device.firmware
+  const clockCtx = buildClockContext(config, deviceData)
 
   const groupMap = new Map<string, { label: string; macroPin: string; macroPort: string }[]>()
   for (const p of prepared) {
@@ -216,6 +322,18 @@ export function generateProject(config: ProjectConfig, deviceData: DeviceData): 
         extiPins: extiPins.map((p) => ({ ...p, edge: `${fw.extiEdgePrefix}${p.edge}` })),
         irqs,
       }),
+    },
+    {
+      path: 'clock.h',
+      content: render(CLOCK_H_TEMPLATE, {
+        device: config.device,
+        includeHeader: fw.header,
+        prefix,
+      }),
+    },
+    {
+      path: 'clock.c',
+      content: render(CLOCK_C_TEMPLATE, clockCtx),
     },
     {
       path: 'project.json',

@@ -1,10 +1,12 @@
-import type { AfEntry, DevicePackage, ExtiEntry, PinDef } from '../types'
+import type { AfEntry, ClockSpec, DevicePackage, ExtiEntry, PinDef } from '../types'
 import deviceJson from '../../data/devices/gd32l233rct6/package.json'
 import afJson from '../../data/devices/gd32l233rct6/af.json'
 import extiJson from '../../data/devices/gd32l233rct6/exti.json'
+import clockJson from '../../data/devices/gd32l233rct6/clock.json'
 import f427DeviceJson from '../../data/devices/gd32f427ve/package.json'
 import f427AfJson from '../../data/devices/gd32f427ve/af.json'
 import f427ExtiJson from '../../data/devices/gd32f427ve/exti.json'
+import f427ClockJson from '../../data/devices/gd32f427ve/clock.json'
 
 export const DEFAULT_DEVICE_ID = 'GD32L233RCT6'
 
@@ -25,6 +27,7 @@ export interface DeviceData {
   device: DevicePackage
   afEntries: AfEntry[]
   extiEntries: ExtiEntry[]
+  clockSpec: ClockSpec
   lookup: Lookup
 }
 
@@ -69,8 +72,16 @@ function buildDevice(
   device: DevicePackage,
   afEntries: AfEntry[],
   extiEntries: ExtiEntry[],
+  clockSpec: ClockSpec,
 ): DeviceData {
-  return { id, device, afEntries, extiEntries, lookup: buildLookup(device, afEntries, extiEntries) }
+  return {
+    id,
+    device,
+    afEntries,
+    extiEntries,
+    clockSpec,
+    lookup: buildLookup(device, afEntries, extiEntries),
+  }
 }
 
 export const devices: Record<string, DeviceData> = {
@@ -79,12 +90,14 @@ export const devices: Record<string, DeviceData> = {
     deviceJson as DevicePackage,
     afJson.entries as AfEntry[],
     extiJson.entries as ExtiEntry[],
+    clockJson as ClockSpec,
   ),
   GD32F427VE: buildDevice(
     'GD32F427VE',
     f427DeviceJson as DevicePackage,
     f427AfJson.entries as AfEntry[],
     f427ExtiJson.entries as ExtiEntry[],
+    f427ClockJson as ClockSpec,
   ),
 }
 
@@ -92,4 +105,8 @@ export const deviceIds = Object.keys(devices)
 
 export function getDeviceData(id: string): DeviceData {
   return devices[id] ?? devices[DEFAULT_DEVICE_ID]
+}
+
+export function getClockSpec(id: string): ClockSpec {
+  return getDeviceData(id).clockSpec
 }

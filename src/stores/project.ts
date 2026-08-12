@@ -1,9 +1,17 @@
 import { defineStore } from 'pinia'
-import type { Conflict, PinAssignment, PinGroup, PinMode, ProjectConfig } from '../types'
-import { getDeviceData } from '../data/device'
+import type {
+  ClockConfig,
+  Conflict,
+  PinAssignment,
+  PinGroup,
+  PinMode,
+  ProjectConfig,
+} from '../types'
+import { getDeviceData, getClockSpec } from '../data/device'
 import type { DeviceData } from '../data/device'
 import { checkConflicts } from '../lib/conflicts'
 import { colorForGroup } from '../lib/groups'
+import { defaultClock, mergeClockConfig } from '../lib/clock'
 
 function newAssignment(mode: PinMode, pin: string): PinAssignment {
   return {
@@ -28,6 +36,7 @@ export const useProjectStore = defineStore('project', {
     groups: [] as PinGroup[],
     selectedPin: null as string | null,
     unlocked: [] as string[],
+    clock: defaultClock(getClockSpec('GD32L233RCT6')) as ClockConfig,
   }),
 
   getters: {
@@ -50,6 +59,7 @@ export const useProjectStore = defineStore('project', {
         pins: Object.values(this.assignments),
         groups: this.groups,
         naming: { prefix: this.prefix },
+        clock: this.clock,
       }
     },
     deviceData(): DeviceData {
@@ -62,6 +72,7 @@ export const useProjectStore = defineStore('project', {
       if (id === this.deviceId || !getDeviceData(id)) return
       this.deviceId = id
       this.clearAll()
+      this.clock = defaultClock(getClockSpec(id))
     },
     selectPin(name: string | null) {
       this.selectedPin = name
@@ -100,6 +111,13 @@ export const useProjectStore = defineStore('project', {
       this.assignments = {}
       this.groups = []
       this.selectedPin = null
+    },
+    setClock(patch: Partial<ClockConfig>) {
+      const spec = getClockSpec(this.deviceId)
+      this.clock = mergeClockConfig(spec, { ...this.clock, ...patch, pll: { ...this.clock.pll, ...(patch.pll ?? {}) } })
+    },
+    resetClock() {
+      this.clock = defaultClock(getClockSpec(this.deviceId))
     },
     addGroup(name: string) {
       const trimmed = name.trim()
@@ -147,11 +165,14 @@ export const useProjectStore = defineStore('project', {
         color: g.color ?? colorForGroup(i),
       }))
       this.prefix = config.naming?.prefix || 'MX_'
+      const spec = getClockSpec(this.deviceId)
+      this.clock = config.clock ? mergeClockConfig(spec, config.clock) : defaultClock(spec)
     },
     /** 应用嘉立创导入结果：必要时切换器件并整体替换引脚配置 */
     applyImport(deviceId: string, assignments: PinAssignment[]) {
       if (deviceId !== this.deviceId && getDeviceData(deviceId)) {
         this.deviceId = deviceId
+        this.clock = defaultClock(getClockSpec(deviceId))
       }
       const next: Record<string, PinAssignment> = {}
       for (const assignment of assignments) {

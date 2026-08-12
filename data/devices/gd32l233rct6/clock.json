@@ -1,0 +1,80 @@
+{
+  "device": "GD32L233RCT6",
+  "source": "GD32L23x 用户手册 Rev2.4 第 4 章（RCU）+ GD32L233xx 数据手册 Rev1.9",
+  "sysclkMaxMhz": 64,
+  "sources": [
+    { "id": "IRC16M", "label": "IRC16M", "freqMhz": 16 },
+    { "id": "HXTAL", "label": "HXTAL", "hxtal": { "min": 4, "max": 32, "default": 25 } },
+    { "id": "IRC48M", "label": "IRC48M", "freqMhz": 48 },
+    { "id": "PLL", "label": "PLL", "pll": true }
+  ],
+  "pll": {
+    "label": "PLL（输出 16~64MHz）",
+    "outMaxMhz": 64,
+    "sourceOptions": ["IRC16M", "HXTAL", "IRC48M"],
+    "params": [
+      {
+        "key": "mul",
+        "label": "倍频系数 PLLMF",
+        "kind": "number",
+        "min": 4,
+        "max": 127,
+        "step": 1,
+        "default": 4
+      }
+    ]
+  },
+  "ahb": { "label": "AHB", "options": [1, 2, 4, 8, 16, 64, 128, 256, 512], "maxMhz": 64, "default": 1 },
+  "apb1": { "label": "APB1", "options": [1, 2, 4, 8, 16], "maxMhz": 32, "default": 2 },
+  "apb2": { "label": "APB2", "options": [1, 2, 4, 8, 16], "maxMhz": 64, "default": 1 },
+  "adc": {
+    "label": "ADC",
+    "maxMhz": 16,
+    "default": "APB2_DIV4",
+    "options": [
+      { "id": "IRC16M", "label": "IRC16M", "source": "IRC16M", "div": 1 },
+      { "id": "APB2_DIV2", "label": "APB2/2", "source": "APB2", "div": 2 },
+      { "id": "APB2_DIV4", "label": "APB2/4", "source": "APB2", "div": 4 },
+      { "id": "APB2_DIV6", "label": "APB2/6", "source": "APB2", "div": 6 },
+      { "id": "APB2_DIV8", "label": "APB2/8", "source": "APB2", "div": 8 },
+      { "id": "APB2_DIV10", "label": "APB2/10", "source": "APB2", "div": 10 },
+      { "id": "APB2_DIV12", "label": "APB2/12", "source": "APB2", "div": 12 },
+      { "id": "APB2_DIV14", "label": "APB2/14", "source": "APB2", "div": 14 },
+      { "id": "APB2_DIV16", "label": "APB2/16", "source": "APB2", "div": 16 },
+      { "id": "AHB_DIV3", "label": "AHB/3", "source": "AHB", "div": 3 },
+      { "id": "AHB_DIV5", "label": "AHB/5", "source": "AHB", "div": 5 },
+      { "id": "AHB_DIV7", "label": "AHB/7", "source": "AHB", "div": 7 },
+      { "id": "AHB_DIV9", "label": "AHB/9", "source": "AHB", "div": 9 },
+      { "id": "AHB_DIV11", "label": "AHB/11", "source": "AHB", "div": 11 },
+      { "id": "AHB_DIV13", "label": "AHB/13", "source": "AHB", "div": 13 },
+      { "id": "AHB_DIV15", "label": "AHB/15", "source": "AHB", "div": 15 },
+      { "id": "AHB_DIV17", "label": "AHB/17", "source": "AHB", "div": 17 }
+    ],
+    "codegen": { "api": "rcu_adc_clock_config", "argMacro": "RCU_ADCCK_<id>" }
+  },
+  "codegen": {
+    "sysclkSource": {
+      "IRC16M": "RCU_CKSYSSRC_IRC16M",
+      "HXTAL": "RCU_CKSYSSRC_HXTAL",
+      "IRC48M": "RCU_CKSYSSRC_IRC48M",
+      "PLL": "RCU_CKSYSSRC_PLL"
+    },
+    "oscEnum": {
+      "IRC16M": "RCU_IRC16M",
+      "HXTAL": "RCU_HXTAL",
+      "IRC48M": "RCU_IRC48M",
+      "PLL": "RCU_PLL_CK"
+    },
+    "pllSrc": {
+      "IRC16M": "RCU_PLLSRC_IRC16M",
+      "HXTAL": "RCU_PLLSRC_HXTAL",
+      "IRC48M": "RCU_PLLSRC_IRC48M"
+    },
+    "pllApi": { "name": "rcu_pll_config", "args": ["src", "mul"], "mulMacro": "RCU_PLL_MUL<mul>" },
+    "prescaler": {
+      "ahb": "RCU_AHB_CKSYS_DIV<div>",
+      "apb1": "RCU_APB1_CKAHB_DIV<div>",
+      "apb2": "RCU_APB2_CKAHB_DIV<div>"
+    }
+  }
+}

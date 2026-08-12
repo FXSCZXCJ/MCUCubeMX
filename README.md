@@ -33,12 +33,22 @@
 - 右侧栏「外设使用情况」：按外设归并展示信号与引脚（USART1: TX=PA10…）、EXTI、通用 GPIO
 - 右侧栏「引脚分组」：按模块自定义分组（单归属、自动配色），封装图按组描边
 
+### 时钟树配置
+
+- 工具栏「时钟」打开**图形化 SVG 时钟树**：源 → PLL → SYSCLK → AHB → APB1/APB2 → ADC
+- 点击节点编辑对应参数（时钟源选择、HXTAL 频率、PLL 倍频/分频、总线分频、ADC 时钟），非法项红色高亮
+- 实时计算频率链并逐项校验：HXTAL 范围、PLL 输入/VCO/输出上限、SYSCLK/AHB/APB1/APB2/ADC 上限与分频档位
+- 数据驱动（`clock.json`）：新增器件只需补一份时钟规格即可获得完整界面与代码生成
+
 ### 代码生成
 
 - EJS 模板生成 `gpio.h`（分组宏定义）、`gpio.c`（`MX_GPIO_Init` / `MX_EXTI_Init`，
   含复用 `gpio_af_set` 与模拟 `GPIO_MODE_ANALOG` 初始化段）、
+  `clock.h/clock.c`（`MX_Clock_Init`：振荡器使能、PLL 配置、AHB/APB1/APB2/ADC 分频、
+   SYSCLK 源选择；F427 顺带 NVIC 优先级分组与 200MHz 高压驱动模式）、
   `app_it.c`（EXTI 中断骨架，带 USER CODE 区段）、`project.json`、`README.md`，打包 ZIP 下载
 - 按器件的固件档案自动适配（头文件、速度档位、NVIC 优先级分组、EXTI 边沿枚举）
+- 生成独立 `clock.c`（不改动固件库 system 文件），旧工程配置无时钟字段时自动使用器件默认时钟
 - 本地 `arm-none-eabi-gcc` + 官方固件库编译验证生成代码
 
 ### 嘉立创 EDA Pro 对接
@@ -74,7 +84,7 @@ npm run dev        # http://localhost:5173
 | `npm run build` | 类型检查（vue-tsc）+ 生产构建 |
 | `npm run test` | 单元/快照/集成测试（Vitest，桥在线时自动跑 EDA 集成用例） |
 | `npm run lint` | ESLint |
-| `npm run validate:device` | 校验器件数据（引脚完整性、AF 表、EXTI 分组） |
+| `npm run validate:device` | 校验器件数据（引脚完整性、AF 表、EXTI 分组、clock.json 结构） |
 | `npm run verify:build` | 用 arm-none-eabi-gcc + GD32 固件库编译验证生成代码 |
 
 ## 编译验证
@@ -104,9 +114,13 @@ F4xx 编译验证使用仓库自带的 CMSIS 5 内核头（`scripts/firmware/cms
   `gpio_af_set` 调用交叉核对 AF 编号
 - `exti.json`：EXTI 线 = 引脚号，中断分组（EXTI0~4 / EXTI5_9 / EXTI10_15）与
   startup_gd32l233.S 向量表一致
+- `clock.json`：时钟树规格，转录自 GD32L23x 用户手册 Rev2.4 第 4 章（RCU）——
+  IRC16M/IRC48M/HXTAL(4~32MHz)、PLL(×4~×127、输出≤64MHz)、AHB/APB1(≤32MHz)/APB2(≤64MHz)/ADC(≤16MHz)
+  分频档位与固件库宏映射；GD32F427VE 的 `clock.json` 转录自 GD32F4xx 用户手册（PLL
+  PSC/N/P/Q、SYSCLK≤200MHz、APB1≤60MHz、APB2≤120MHz、ADC≤40MHz）
 
 `scripts/validate-device-data.mjs` 强制执行一致性校验：引脚唯一连续、每边引脚数、
-AF 表与引脚定义集合一致、EXTI 分组正确。
+AF 表与引脚定义集合一致、EXTI 分组正确、clock.json 档位/范围/宏映射齐全。
 
 ## 架构
 
@@ -115,11 +129,12 @@ src/
   data/device.ts          器件数据加载与查询（多器件注册表）
   lib/packageSvg.ts       封装图几何、配色与旋转/导出辅助
   lib/conflicts/          冲突检查规则
+  lib/clock/              时钟频率链计算、合法性校验、SVG 树布局
   lib/codegen/            EJS 模板 + 生成器 + ZIP 导出
   lib/jlc/                嘉立创桥客户端、引脚归一化、导入/导出计划、偏好存储
   stores/project.ts       Pinia 状态（配置、解锁、持久化）
-  components/             封装图 / 引脚表 / 配置面板 / 冲突面板 / 生成预览 / 嘉立创对接面板
-data/devices/gd32l233rct6/  器件数据（package / af / exti）
+  components/             封装图 / 引脚表 / 配置面板 / 时钟树 / 冲突面板 / 生成预览 / 嘉立创对接面板
+data/devices/gd32l233rct6/  器件数据（package / af / exti / clock）
 scripts/                  validate-device-data / verify-build / build-generated / jlc 桥
 tests/                    数据、冲突、代码生成、封装图、JLC 导入/偏好、EDA 集成测试
 ```
@@ -129,8 +144,9 @@ tests/                    数据、冲突、代码生成、封装图、JLC 导�
 
 ## 路线图
 
-- **Phase 1（当前）**：引脚配置 + GPIO/EXTI 代码生成 + 编译验证 + 嘉立创 EDA Pro 双向同步
-- **Phase 2**：时钟树配置（合法性计算 + 生成 `system_gd32l23x.c` 覆盖段）
+- **Phase 1（已完成）**：引脚配置 + GPIO/EXTI 代码生成 + 编译验证 + 嘉立创 EDA Pro 双向同步
+- **Phase 2（已完成）**：图形化时钟树配置（频率链计算 + 合法性校验 + 生成独立 `clock.c/clock.h`，
+  已接入 L233/F427 编译验证）；后续可扩展图形化 PLL 自动解算与更多时钟输出（CK_OUT/USBD）
 - **Phase 3**：已完成 AF 复用/模拟选择（互斥检查）、外设使用侧边栏、引脚分组；
   剩余外设驱动初始化（UART/SPI/I2C/ADC/TIMER 的 AF 自动分配与实例配置）
 - **Phase 4**：工程级导出（Keil/GCC/Embedded Builder、链接脚本、`main.c` 骨架、多型号支持）

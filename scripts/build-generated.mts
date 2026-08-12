@@ -21,9 +21,11 @@ for (const file of files) {
 
 const prefix = config.naming.prefix || 'MX_'
 const main = `#include "gpio.h"
+#include "clock.h"
 
 int main(void)
 {
+    ${prefix}Clock_Init();
     ${prefix}GPIO_Init();
 ${config.pins.some((p) => p.mode === 'INPUT' && p.params.exti?.enabled) ? `    ${prefix}EXTI_Init();\n` : ''}    while (1) {
     }

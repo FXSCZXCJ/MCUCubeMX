@@ -6,5 +6,7 @@
 #include "gd32f4xx_gpio.h"
 #include "gd32f4xx_exti.h"
 #include "gd32f4xx_misc.h"
+#include "gd32f4xx_adc.h"
+#include "gd32f4xx_pmu.h"
 
 #endif /* GD32F4XX_LIBOPT_H */

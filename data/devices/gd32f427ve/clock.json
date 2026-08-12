@@ -1,0 +1,92 @@
+{
+  "device": "GD32F427VE",
+  "source": "GD32F4xx 用户手册 Rev2.2（RCU/PLL）+ GD32F427xx 数据手册 Rev1.9",
+  "sysclkMaxMhz": 200,
+  "sources": [
+    { "id": "IRC16M", "label": "IRC16M", "freqMhz": 16 },
+    { "id": "HXTAL", "label": "HXTAL", "hxtal": { "min": 4, "max": 32, "default": 25 } },
+    { "id": "PLL", "label": "PLL", "pll": true }
+  ],
+  "pll": {
+    "label": "PLL（SYSCLK≤200MHz，VCO 100~500MHz）",
+    "outMaxMhz": 200,
+    "vcoMinMhz": 100,
+    "vcoMaxMhz": 500,
+    "inMinMhz": 1,
+    "inMaxMhz": 2,
+    "sourceOptions": ["IRC16M", "HXTAL"],
+    "params": [
+      {
+        "key": "psc",
+        "label": "预分频 PSC",
+        "kind": "number",
+        "min": 2,
+        "max": 63,
+        "step": 1,
+        "default": 25
+      },
+      {
+        "key": "n",
+        "label": "倍频系数 N",
+        "kind": "number",
+        "min": 64,
+        "max": 500,
+        "step": 1,
+        "default": 400
+      },
+      { "key": "p", "label": "输出分频 P", "kind": "select", "options": [2, 4, 6, 8], "default": 2 },
+      {
+        "key": "q",
+        "label": "USB 分频 Q",
+        "kind": "number",
+        "min": 2,
+        "max": 15,
+        "step": 1,
+        "default": 9
+      }
+    ]
+  },
+  "ahb": { "label": "AHB", "options": [1, 2, 4, 8, 16, 64, 128, 256, 512], "maxMhz": 200, "default": 1 },
+  "apb1": { "label": "APB1", "options": [1, 2, 4, 8, 16], "maxMhz": 60, "default": 4 },
+  "apb2": { "label": "APB2", "options": [1, 2, 4, 8, 16], "maxMhz": 120, "default": 2 },
+  "adc": {
+    "label": "ADC",
+    "maxMhz": 40,
+    "default": "PCLK2_DIV4",
+    "options": [
+      { "id": "PCLK2_DIV2", "label": "APB2/2", "source": "APB2", "div": 2 },
+      { "id": "PCLK2_DIV4", "label": "APB2/4", "source": "APB2", "div": 4 },
+      { "id": "PCLK2_DIV6", "label": "APB2/6", "source": "APB2", "div": 6 },
+      { "id": "PCLK2_DIV8", "label": "APB2/8", "source": "APB2", "div": 8 },
+      { "id": "HCLK_DIV5", "label": "AHB/5", "source": "AHB", "div": 5 },
+      { "id": "HCLK_DIV6", "label": "AHB/6", "source": "AHB", "div": 6 },
+      { "id": "HCLK_DIV10", "label": "AHB/10", "source": "AHB", "div": 10 },
+      { "id": "HCLK_DIV20", "label": "AHB/20", "source": "AHB", "div": 20 }
+    ],
+    "codegen": { "api": "adc_clock_config", "argMacro": "ADC_ADCCK_<id>", "include": "gd32f4xx_adc.h" }
+  },
+  "codegen": {
+    "sysclkSource": {
+      "IRC16M": "RCU_CKSYSSRC_IRC16M",
+      "HXTAL": "RCU_CKSYSSRC_HXTAL",
+      "PLL": "RCU_CKSYSSRC_PLLP"
+    },
+    "oscEnum": {
+      "IRC16M": "RCU_IRC16M",
+      "HXTAL": "RCU_HXTAL",
+      "PLL": "RCU_PLL_CK"
+    },
+    "pllSrc": {
+      "IRC16M": "RCU_PLLSRC_IRC16M",
+      "HXTAL": "RCU_PLLSRC_HXTAL"
+    },
+    "pllApi": { "name": "rcu_pll_config", "args": ["src", "psc", "n", "p", "q"] },
+    "prescaler": {
+      "ahb": "RCU_AHB_CKSYS_DIV<div>",
+      "apb1": "RCU_APB1_CKAHB_DIV<div>",
+      "apb2": "RCU_APB2_CKAHB_DIV<div>"
+    },
+    "nvicPriorityGroupMacro": "NVIC_PRIGROUP_PRE2_SUB2",
+    "highDriveMhz": 168
+  }
+}

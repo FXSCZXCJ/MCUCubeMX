@@ -1,4 +1,4 @@
-// 器件数据校验（支持多器件）：引脚完整性、AF 表与引脚定义一致性、EXTI 分组正确性。
+// 器件数据校验（支持多器件）：引脚完整性、AF 表与引脚定义一致性、EXTI 分组正确性、clock.json 结构。
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -16,6 +16,7 @@ for (const dev of devices) {
   const pkg = read('package.json')
   const af = read('af.json')
   const exti = read('exti.json')
+  const clock = read('clock.json')
   const fail = (msg) => errors.push(`[${dev}] ${msg}`)
   const pins = pkg.pins
   const pinsPerSide = pkg.pinsPerSide
@@ -84,6 +85,118 @@ for (const dev of devices) {
     if (extiSeen.has(entry.pin)) fail(`exti.json 重复 ${entry.pin}`)
     extiSeen.add(entry.pin)
   }
+
+  // ===== clock.json 结构校验 =====
+  if (!clock || typeof clock !== 'object') {
+    fail('缺少 clock.json')
+  } else {
+    validateClockData(clock, fail)
+  }
+}
+
+function validateClockData(clock, fail) {
+  const pos = (n) => n > 0 && Number.isFinite(n)
+  if (!pos(clock.sysclkMaxMhz)) fail('clock.sysclkMaxMhz 应为正数')
+  const sourceIds = new Set()
+  if (!Array.isArray(clock.sources) || clock.sources.length === 0) {
+    fail('clock.sources 不能为空')
+  } else {
+    for (const s of clock.sources) {
+      if (!s.id || !s.label) fail(`clock.sources 缺少 id/label: ${JSON.stringify(s)}`)
+      if (sourceIds.has(s.id)) fail(`clock.sources 重复 id ${s.id}`)
+      sourceIds.add(s.id)
+      if (s.hxtal) {
+        const h = s.hxtal
+        if (!(h.min < h.max && pos(h.min) && pos(h.max))) fail(`clock.sources.${s.id}.hxtal 范围非法`)
+        if (!(h.default >= h.min && h.default <= h.max)) fail(`clock.sources.${s.id}.hxtal.default 超出范围`)
+      } else if (!pos(s.freqMhz) && !s.pll) {
+        fail(`clock.sources.${s.id} 需要 freqMhz、hxtal 或 pll 标记`)
+      }
+    }
+  }
+  const pll = clock.pll
+  if (!pos(pll?.outMaxMhz)) fail('clock.pll.outMaxMhz 应为正数')
+  if (!Array.isArray(pll?.sourceOptions) || pll.sourceOptions.length === 0) {
+    fail('clock.pll.sourceOptions 不能为空')
+  } else {
+    for (const id of pll.sourceOptions) {
+      if (!sourceIds.has(id)) fail(`clock.pll.sourceOptions 引用未知源 ${id}`)
+    }
+  }
+  if (!Array.isArray(pll?.params) || pll.params.length === 0) {
+    fail('clock.pll.params 不能为空')
+  } else {
+    const keys = new Set()
+    for (const p of pll.params) {
+      if (!p.key || !p.label) fail(`clock.pll.params 缺少 key/label: ${JSON.stringify(p)}`)
+      if (keys.has(p.key)) fail(`clock.pll.params 重复 key ${p.key}`)
+      keys.add(p.key)
+      if (p.kind === 'select') {
+        if (!Array.isArray(p.options) || !p.options.includes(p.default)) {
+          fail(`clock.pll.params.${p.key} select 需要 options 且 default 在其中`)
+        }
+      } else if (p.kind === 'number') {
+        if (!(p.min <= p.default && p.default <= p.max)) fail(`clock.pll.params.${p.key} default 超出范围`)
+      } else {
+        fail(`clock.pll.params.${p.key} kind 非法: ${p.kind}`)
+      }
+    }
+  }
+  for (const bus of ['ahb', 'apb1', 'apb2']) {
+    const b = clock[bus]
+    if (!pos(b?.maxMhz)) fail(`clock.${bus}.maxMhz 应为正数`)
+    if (!Array.isArray(b?.options) || b.options.length === 0 || !b.options.every((o) => pos(o))) {
+      fail(`clock.${bus}.options 非法`)
+    } else if (!b.options.includes(b.default)) {
+      fail(`clock.${bus}.default ${b.default} 不在 options 中`)
+    }
+  }
+  const adc = clock.adc
+  if (!pos(adc?.maxMhz)) fail('clock.adc.maxMhz 应为正数')
+  if (!Array.isArray(adc?.options) || adc.options.length === 0) {
+    fail('clock.adc.options 不能为空')
+  } else {
+    const ids = new Set()
+    for (const o of adc.options) {
+      if (!o.id || !o.label || !pos(o.div)) fail(`clock.adc.options 非法: ${JSON.stringify(o)}`)
+      if (ids.has(o.id)) fail(`clock.adc.options 重复 id ${o.id}`)
+      ids.add(o.id)
+      if (!['APB1', 'APB2', 'AHB', 'IRC16M', 'IRC48M', 'PLL'].includes(o.source)) {
+        fail(`clock.adc.options.${o.id} source 非法: ${o.source}`)
+      }
+    }
+    if (!ids.has(adc.default)) fail(`clock.adc.default ${adc.default} 不在 options 中`)
+  }
+  if (adc?.codegen) {
+    if (!adc.codegen.api || !adc.codegen.argMacro?.includes('<id>')) {
+      fail('clock.adc.codegen 需要 api 与包含 <id> 的 argMacro')
+    }
+  }
+  const cg = clock.codegen
+  if (!cg) return fail('clock.codegen 缺失')
+  for (const s of clock.sources ?? []) {
+    if (!cg.sysclkSource?.[s.id]) fail(`clock.codegen.sysclkSource 缺少 ${s.id}`)
+    if (!cg.oscEnum?.[s.id]) fail(`clock.codegen.oscEnum 缺少 ${s.id}`)
+  }
+  const hasPll = (clock.sources ?? []).some((s) => s.pll)
+  if (hasPll) {
+    if (!cg.oscEnum?.PLL) fail('clock.codegen.oscEnum 缺少 PLL')
+    if (!cg.sysclkSource?.PLL) fail('clock.codegen.sysclkSource 缺少 PLL')
+    if (!cg.pllApi?.name || !Array.isArray(cg.pllApi.args)) fail('clock.codegen.pllApi 非法')
+    const paramKeys = new Set((clock.pll?.params ?? []).map((p) => p.key))
+    for (const a of cg.pllApi?.args ?? []) {
+      if (a !== 'src' && !paramKeys.has(a)) fail(`clock.codegen.pllApi.args 引用未知参数 ${a}`)
+    }
+    if (cg.pllApi?.args.includes('mul') && !cg.pllApi?.mulMacro?.includes('<mul>')) {
+      fail('clock.codegen.pllApi.mulMacro 应包含 <mul>')
+    }
+  }
+  for (const bus of ['ahb', 'apb1', 'apb2']) {
+    if (!cg.prescaler?.[bus]?.includes('<div>')) fail(`clock.codegen.prescaler.${bus} 应包含 <div>`)
+  }
+  for (const srcId of (clock.pll?.sourceOptions ?? [])) {
+    if (!cg.pllSrc?.[srcId]) fail(`clock.codegen.pllSrc 缺少 ${srcId}`)
+  }
 }
 
 if (errors.length) {
@@ -96,6 +209,6 @@ for (const dev of devices) {
   const af = JSON.parse(readFileSync(path.join(devicesDir, dev, 'af.json'), 'utf8'))
   const exti = JSON.parse(readFileSync(path.join(devicesDir, dev, 'exti.json'), 'utf8'))
   console.log(
-    `OK: ${pkg.device} ${pkg.package} | ${pkg.pins.length} pins | ${af.entries.length} AF entries | ${exti.entries.length} EXTI entries`,
+    `OK: ${pkg.device} ${pkg.package} | ${pkg.pins.length} pins | ${af.entries.length} AF entries | ${exti.entries.length} EXTI entries | clock 源=${JSON.parse(readFileSync(path.join(devicesDir, dev, 'clock.json'), 'utf8')).sources.length}`,
   )
 }

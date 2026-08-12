@@ -32,5 +32,15 @@
       }
     }
   ],
-  "naming": { "prefix": "MX_" }
+  "naming": { "prefix": "MX_" },
+  "clock": {
+    "source": "PLL",
+    "hxtalMhz": 25,
+    "pllSource": "HXTAL",
+    "pll": { "psc": 25, "n": 400, "p": 2, "q": 9 },
+    "ahb": 1,
+    "apb1": 4,
+    "apb2": 2,
+    "adc": "PCLK2_DIV4"
+  }
 }

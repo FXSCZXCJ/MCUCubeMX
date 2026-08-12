@@ -8,6 +8,7 @@ import ConflictsPanel from './components/ConflictsPanel.vue'
 import PeripheralUsagePanel from './components/PeripheralUsagePanel.vue'
 import GroupsPanel from './components/GroupsPanel.vue'
 import CodegenDialog from './components/CodegenDialog.vue'
+import ClockTreeDialog from './components/ClockTreeDialog.vue'
 import JlcBridgePanel from './components/JlcBridgePanel.vue'
 import { useProjectStore } from './stores/project'
 import { downloadBlob } from './lib/codegen'
@@ -16,6 +17,7 @@ import type { ProjectConfig } from './types'
 
 const store = useProjectStore()
 const codegenVisible = ref(false)
+const clockVisible = ref(false)
 const jlcVisible = ref(false)
 const jlcAction = ref<'sync' | 'import' | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -112,6 +114,7 @@ async function clearAll() {
         <el-button size="small" @click="onImportClick">导入配置</el-button>
         <el-button size="small" @click="exportConfig">导出配置</el-button>
         <el-button size="small" @click="clearAll">清空</el-button>
+        <el-button size="small" type="primary" plain @click="clockVisible = true">时钟</el-button>
         <el-button size="small" type="warning" plain @click="onSyncToEda">同步到 EDA</el-button>
         <el-button size="small" type="success" plain @click="onImportFromEda">从 EDA 同步</el-button>
         <el-button size="small" type="primary" plain @click="jlcVisible = true">嘉立创</el-button>
@@ -159,6 +162,7 @@ async function clearAll() {
     </main>
 
     <CodegenDialog v-model="codegenVisible" />
+    <ClockTreeDialog v-model="clockVisible" />
     <JlcBridgePanel
       :model-value="jlcVisible"
       :pending-action="jlcAction"
