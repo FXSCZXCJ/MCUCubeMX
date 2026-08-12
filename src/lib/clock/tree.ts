@@ -23,6 +23,8 @@ export interface ClockTreeEdge {
   label: string
   active: boolean
   error: boolean
+  /** SVG path d：从起点底边到终点顶边的平滑贝塞尔曲线 */
+  path: string
 }
 
 export interface ClockTreeLayout {
@@ -183,7 +185,19 @@ export function buildClockTree(
     label: string,
     active: boolean,
     error: boolean,
-  ) => edges.push({ id, from, to, label, active, error })
+  ) => {
+    const a = nodes.find((n) => n.id === from)
+    const b = nodes.find((n) => n.id === to)
+    if (!a || !b) return
+    const x1 = a.x + a.w / 2
+    const y1 = a.y + a.h
+    const x2 = b.x + b.w / 2
+    const y2 = b.y
+    const dy = y2 - y1
+    const ctrl = Math.max(20, Math.abs(dy) * 0.45)
+    const d = `M ${x1} ${y1} C ${x1} ${y1 + ctrl}, ${x2} ${y2 - ctrl}, ${x2} ${y2}`
+    edges.push({ id, from, to, label, active, error, path: d })
+  }
 
   const srcNode = usePll ? srcById.get(config.pllSource) : srcById.get(config.source)
   if (usePll && srcNode) {

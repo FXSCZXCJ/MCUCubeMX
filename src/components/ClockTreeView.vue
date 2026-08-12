@@ -227,16 +227,24 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
                 >
                   <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
                 </marker>
+                <marker
+                  id="arrow-err"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+                </marker>
               </defs>
               <g v-for="e in tree.edges" :key="e.id">
-                <line
-                  :x1="nodeOf(e.from)!.x + nodeOf(e.from)!.w / 2"
-                  :y1="nodeOf(e.from)!.y + nodeOf(e.from)!.h"
-                  :x2="nodeOf(e.to)!.x + nodeOf(e.to)!.w / 2"
-                  :y2="nodeOf(e.to)!.y"
+                <path
+                  :d="e.path"
                   :class="{ 'edge-err': e.error }"
+                  :marker-end="e.error ? 'url(#arrow-err)' : 'url(#arrow)'"
                   class="tree-edge"
-                  marker-end="url(#arrow)"
                 />
                 <text
                   v-if="e.label"
@@ -615,14 +623,23 @@ const clockSelectEntries = computed(() => Object.entries(spec.value.clockSelect 
 }
 .tree-edge {
   stroke: #94a3b8;
-  stroke-width: 1.6;
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+.tree-edge:not(.edge-err) {
+  stroke: #7c8db5;
 }
 .edge-err {
   stroke: #ef4444;
 }
 .edge-label {
-  font-size: 11px;
-  fill: #475569;
+  font-size: 12.5px;
+  font-weight: 700;
+  fill: #1e293b;
+  stroke: #ffffff;
+  stroke-width: 3px;
+  paint-order: stroke;
 }
 .tree-node {
   cursor: pointer;
