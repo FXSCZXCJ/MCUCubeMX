@@ -1,3 +1,5 @@
+import type { PinMode } from '../../types'
+
 export interface BridgeHealth {
   service: string
   status: string
@@ -114,7 +116,7 @@ export interface ExportChangeItem {
   /** 命中网络端口的图元 ID（action=update-port 时） */
   portId?: string | null
   /** 输入/输出方向，决定放置 IN / OUT 网络端口 */
-  mode?: 'INPUT' | 'OUTPUT'
+  mode?: PinMode
   /** 引脚在原理图上的坐标（放置标签用） */
   x?: number
   y?: number

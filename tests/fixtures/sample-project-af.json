@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "device": "GD32L233RCT6",
+  "pins": [
+    {
+      "pin": "PA2",
+      "label": "UART_TX",
+      "mode": "AF",
+      "function": "USART1_TX",
+      "params": { "pull": "NONE", "exti": { "enabled": false, "edge": "FALLING" } }
+    },
+    {
+      "pin": "PA3",
+      "label": "UART_RX",
+      "mode": "AF",
+      "function": "USART1_RX",
+      "params": { "pull": "NONE", "exti": { "enabled": false, "edge": "FALLING" } }
+    },
+    {
+      "pin": "PA0",
+      "label": "ADC_CH0",
+      "mode": "ANALOG",
+      "function": "ADC_IN0",
+      "params": { "pull": "NONE", "exti": { "enabled": false, "edge": "FALLING" } }
+    }
+  ],
+  "groups": [{ "name": "UART", "pins": ["PA2", "PA3"], "color": "#7c4dff" }],
+  "naming": { "prefix": "MX_" }
+}

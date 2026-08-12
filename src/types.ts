@@ -1,4 +1,4 @@
-export type PinMode = 'INPUT' | 'OUTPUT'
+export type PinMode = 'INPUT' | 'OUTPUT' | 'AF' | 'ANALOG'
 export type PortLetter = 'A' | 'B' | 'C' | 'D' | 'F'
 export type PinSide = 'top' | 'right' | 'bottom' | 'left'
 export type PinType = 'IO' | 'POWER' | 'NC'
@@ -68,13 +68,23 @@ export interface PinAssignment {
   pin: string
   label?: string
   mode: PinMode
+  /** AF 复用信号或模拟信号（如 USART1_TX / ADC_IN0），mode 为 AF/ANALOG 时使用 */
+  function?: string
   params: PinParams
+}
+
+export interface PinGroup {
+  name: string
+  pins: string[]
+  color?: string
 }
 
 export interface ProjectConfig {
   version: 1
   device: string
   pins: PinAssignment[]
+  /** 引脚自定义分组（单归属） */
+  groups?: PinGroup[]
   naming: { prefix: string }
 }
 

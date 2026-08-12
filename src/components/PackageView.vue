@@ -11,6 +11,7 @@ import {
 } from '../lib/packageSvg'
 import { downloadBlob } from '../lib/codegen'
 import { useProjectStore } from '../stores/project'
+import { groupOfPin } from '../lib/groups'
 import type { PinDef } from '../types'
 
 const store = useProjectStore()
@@ -129,6 +130,7 @@ const pins = computed(() =>
       g,
       labelDy: outsideLabelDy(pin, geo.value.pinsPerSide),
       color: PIN_COLORS[stateOf(pin)],
+      groupColor: groupOfPin(store.groups, pin.name)?.color ?? null,
       selected: store.selectedPin === pin.name,
     }
   }),
@@ -161,6 +163,15 @@ const hoverExtiText = computed(() => {
   const edge = hoverAssignment.value?.params.exti?.edge
   return edge === 'RISING' ? '上升沿' : edge === 'BOTH' ? '双边沿' : '下降沿'
 })
+
+const hoverModeText = computed(() => {
+  const mode = hoverAssignment.value?.mode
+  return mode === 'OUTPUT' ? '输出' : mode === 'INPUT' ? '输入' : mode === 'AF' ? '复用(AF)' : mode === 'ANALOG' ? '模拟' : ''
+})
+
+const hoverGroupName = computed(() =>
+  hoverPin.value ? groupOfPin(store.groups, hoverPin.value.name)?.name ?? '' : '',
+)
 
 // 旋转封装图时文字反向补偿，保持水平可读（文字仍随引脚移动）
 const pinTextStyle = computed(() => ({ transform: `rotate(${-rotation.value}deg)` }))
@@ -358,6 +369,17 @@ function displayLabel(pin: PinDef): string | undefined {
             :stroke="item.selected ? '#7c4dff' : item.color.stroke"
             :stroke-width="item.selected ? 2.5 : 1"
           />
+          <rect
+            v-if="item.groupColor"
+            :x="item.g.x - 2"
+            :y="item.g.y - 2"
+            :width="item.g.w + 4"
+            :height="item.g.h + 4"
+            rx="3"
+            fill="none"
+            :stroke="item.groupColor"
+            stroke-width="1.5"
+          />
           <text
             class="pin-text"
             :style="pinTextStyle"
@@ -411,7 +433,13 @@ function displayLabel(pin: PinDef): string | undefined {
         </div>
         <template v-if="hoverAssignment">
           <div class="pop-line">标签：{{ hoverAssignment.label || '—' }}</div>
-          <div class="pop-line">模式：{{ hoverAssignment.mode }}</div>
+          <div class="pop-line">模式：{{ hoverModeText }}</div>
+          <div
+            v-if="hoverAssignment.mode === 'AF' || hoverAssignment.mode === 'ANALOG'"
+            class="pop-line"
+          >
+            功能：{{ hoverAssignment.function }}
+          </div>
           <div v-if="hoverAssignment.mode === 'OUTPUT'" class="pop-line">
             输出：{{ hoverAssignment.params.outputType }} / {{ hoverAssignment.params.speed }}MHz /
             {{ hoverAssignment.params.level }}
@@ -424,6 +452,7 @@ function displayLabel(pin: PinDef): string | undefined {
           </div>
         </template>
         <div v-else class="pop-line">未配置</div>
+        <div class="pop-line">所属分组：{{ hoverGroupName || '无' }}</div>
         <div v-if="hoverAfSignals.length" class="pop-af">
           <div class="pop-line">可配置 AF（后续实现）：</div>
           <div class="af-tags">

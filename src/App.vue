@@ -5,6 +5,8 @@ import PackageView from './components/PackageView.vue'
 import PinTable from './components/PinTable.vue'
 import PinConfigPanel from './components/PinConfigPanel.vue'
 import ConflictsPanel from './components/ConflictsPanel.vue'
+import PeripheralUsagePanel from './components/PeripheralUsagePanel.vue'
+import GroupsPanel from './components/GroupsPanel.vue'
 import CodegenDialog from './components/CodegenDialog.vue'
 import JlcBridgePanel from './components/JlcBridgePanel.vue'
 import { useProjectStore } from './stores/project'
@@ -137,6 +139,14 @@ async function clearAll() {
           <div class="table-wrap">
             <PinTable />
           </div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">外设使用情况</div>
+          <PeripheralUsagePanel />
+        </div>
+        <div class="panel">
+          <div class="panel-title">引脚分组</div>
+          <GroupsPanel />
         </div>
         <div class="panel">
           <div class="panel-title">引脚配置</div>

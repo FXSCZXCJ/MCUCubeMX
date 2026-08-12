@@ -44,10 +44,21 @@ interface ExtiOutPin extends OutPin {
   edge: string
 }
 
+interface AfOutPin extends OutPin {
+  af: number
+  func: string
+}
+
+interface AnalogOutPin extends OutPin {
+  func: string
+}
+
 function prepare(config: ProjectConfig, deviceData: DeviceData): {
   prepared: PreparedPin[]
   outputPins: OutPin[]
   inputPins: OutPin[]
+  afPins: AfOutPin[]
+  analogPins: AnalogOutPin[]
   extiPins: ExtiOutPin[]
   irqs: string[]
 } {
@@ -87,6 +98,42 @@ function prepare(config: ProjectConfig, deviceData: DeviceData): {
       pull: p.assignment.params.pull ?? 'NONE',
     }))
 
+  const afPins: AfOutPin[] = prepared
+    .filter((p) => p.assignment.mode === 'AF' && p.assignment.function)
+    .sort((a, b) => a.pinDef.number - b.pinDef.number)
+    .flatMap((p) => {
+      const afMap = deviceData.lookup.afSignalsOf(p.pinDef.name)
+      let af: number | undefined
+      for (const [n, signals] of afMap) {
+        if (signals.includes(p.assignment.function!)) {
+          af = n
+          break
+        }
+      }
+      if (af === undefined) return []
+      return [
+        {
+          label: p.label,
+          pinName: p.pinDef.name,
+          port: deviceData.lookup.portOf(p.pinDef.name),
+          pin: deviceData.lookup.pinIndex(p.pinDef.name),
+          af,
+          func: p.assignment.function!,
+        },
+      ]
+    })
+
+  const analogPins: AnalogOutPin[] = prepared
+    .filter((p) => p.assignment.mode === 'ANALOG' && p.assignment.function)
+    .sort((a, b) => a.pinDef.number - b.pinDef.number)
+    .map((p) => ({
+      label: p.label,
+      pinName: p.pinDef.name,
+      port: deviceData.lookup.portOf(p.pinDef.name),
+      pin: deviceData.lookup.pinIndex(p.pinDef.name),
+      func: p.assignment.function!,
+    }))
+
   const extiPins: ExtiOutPin[] = prepared
     .filter((p) => p.assignment.mode === 'INPUT' && p.assignment.params.exti?.enabled)
     .sort((a, b) => a.pinDef.number - b.pinDef.number)
@@ -107,12 +154,15 @@ function prepare(config: ProjectConfig, deviceData: DeviceData): {
   }
   const irqs = [...irqSet].sort()
 
-  return { prepared, outputPins, inputPins, extiPins, irqs }
+  return { prepared, outputPins, inputPins, afPins, analogPins, extiPins, irqs }
 }
 
 export function generateProject(config: ProjectConfig, deviceData: DeviceData): GeneratedFile[] {
   const prefix = config.naming.prefix || 'MX_'
-  const { prepared, outputPins, inputPins, extiPins, irqs } = prepare(config, deviceData)
+  const { prepared, outputPins, inputPins, afPins, analogPins, extiPins, irqs } = prepare(
+    config,
+    deviceData,
+  )
   const hasExti = extiPins.length > 0
   const fw = deviceData.device.firmware
 
@@ -161,6 +211,8 @@ export function generateProject(config: ProjectConfig, deviceData: DeviceData): 
         ports: portList,
         outputPins,
         inputPins,
+        afPins,
+        analogPins,
         extiPins: extiPins.map((p) => ({ ...p, edge: `${fw.extiEdgePrefix}${p.edge}` })),
         irqs,
       }),

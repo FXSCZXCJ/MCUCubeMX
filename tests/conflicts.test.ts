@@ -74,4 +74,39 @@ describe('冲突检查', () => {
     const boot = checkConflicts(config([base('BOOT0')]), f427)
     expect(boot.some((c) => c.code === 'SPECIAL_PIN_LOCKED')).toBe(true)
   })
+
+  it('AF 信号重复分配报错', () => {
+    const pins = [
+      { ...base('PA2'), mode: 'AF' as const, function: 'USART1_TX', params: {} },
+      { ...base('PA3'), mode: 'AF' as const, function: 'USART1_TX', params: {} },
+    ]
+    const conflicts = checkConflicts(config(pins), dd)
+    expect(conflicts.some((c) => c.code === 'AF_SIGNAL_DUPLICATE' && c.severity === 'error')).toBe(
+      true,
+    )
+  })
+
+  it('模拟通道重复分配报错', () => {
+    const pins = [
+      { ...base('PA0'), mode: 'ANALOG' as const, function: 'ADC_IN0', params: {} },
+      { ...base('PA4'), mode: 'ANALOG' as const, function: 'ADC_IN0', params: {} },
+    ]
+    const conflicts = checkConflicts(config(pins), dd)
+    expect(conflicts.some((c) => c.code === 'ANALOG_DUPLICATE' && c.severity === 'error')).toBe(
+      true,
+    )
+  })
+
+  it('AF 引脚启用 EXTI 给出警告', () => {
+    const pins = [
+      {
+        ...base('PA2'),
+        mode: 'AF' as const,
+        function: 'USART1_TX',
+        params: { exti: { enabled: true, edge: 'FALLING' as const } },
+      },
+    ]
+    const conflicts = checkConflicts(config(pins), dd)
+    expect(conflicts.some((c) => c.code === 'EXTI_ON_NON_INPUT')).toBe(true)
+  })
 })

@@ -77,11 +77,11 @@ export function checkConflicts(
       const list = extiByLine.get(line) ?? []
       list.push(assignment)
       extiByLine.set(line, list)
-    } else if (assignment.mode === 'OUTPUT' && exti?.enabled) {
+    } else if (assignment.mode !== 'INPUT' && exti?.enabled) {
       conflicts.push({
         severity: 'warning',
-        code: 'EXTI_ON_OUTPUT',
-        message: `${name} 是输出模式，EXTI 配置将被忽略`,
+        code: 'EXTI_ON_NON_INPUT',
+        message: `${name} 不是输入模式，EXTI 配置将被忽略`,
         pins: [name],
       })
     }
@@ -105,6 +105,42 @@ export function checkConflicts(
         severity: 'warning',
         code: 'DUPLICATE_LABEL',
         message: `标签 "${label}" 被多个引脚使用（${pins.join(' / ')}），生成的宏名会冲突`,
+        pins,
+      })
+    }
+  }
+
+  // AF / 模拟信号互斥：同一信号只能分配到一个引脚
+  const afBySignal = new Map<string, string[]>()
+  const analogBySignal = new Map<string, string[]>()
+  for (const assignment of config.pins) {
+    if (!assignment.function) continue
+    if (assignment.mode === 'AF') {
+      const list = afBySignal.get(assignment.function) ?? []
+      list.push(assignment.pin.toUpperCase())
+      afBySignal.set(assignment.function, list)
+    } else if (assignment.mode === 'ANALOG') {
+      const list = analogBySignal.get(assignment.function) ?? []
+      list.push(assignment.pin.toUpperCase())
+      analogBySignal.set(assignment.function, list)
+    }
+  }
+  for (const [signal, pins] of afBySignal) {
+    if (pins.length > 1) {
+      conflicts.push({
+        severity: 'error',
+        code: 'AF_SIGNAL_DUPLICATE',
+        message: `${pins.join(' / ')} 重复使用 AF 信号 ${signal}（外设信号需互斥）`,
+        pins,
+      })
+    }
+  }
+  for (const [signal, pins] of analogBySignal) {
+    if (pins.length > 1) {
+      conflicts.push({
+        severity: 'error',
+        code: 'ANALOG_DUPLICATE',
+        message: `${pins.join(' / ')} 重复使用模拟通道 ${signal}（同一模拟通道只能分配一次）`,
         pins,
       })
     }

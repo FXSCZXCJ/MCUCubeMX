@@ -68,6 +68,23 @@ void <%= prefix %>GPIO_Init(void)
     gpio_mode_set(GPIO<%= p.port %>, GPIO_MODE_INPUT, GPIO_PUPD_<%= p.pull %>, GPIO_PIN_<%= p.pin %>);
 
 <% }); %>
+<% if (afPins.length) { -%>
+    /* ============ 复用功能引脚 ============ */
+<% afPins.forEach(function(p){ -%>
+    /* <%= p.label %> (<%= p.pinName %> : <%= p.func %>) */
+    gpio_mode_set(GPIO<%= p.port %>, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO_PIN_<%= p.pin %>);
+    gpio_af_set(GPIO<%= p.port %>, GPIO_AF_<%= p.af %>, GPIO_PIN_<%= p.pin %>);
+
+<% }); -%>
+<% } -%>
+<% if (analogPins.length) { -%>
+    /* ============ 模拟引脚 ============ */
+<% analogPins.forEach(function(p){ -%>
+    /* <%= p.label %> (<%= p.pinName %> : <%= p.func %>) */
+    gpio_mode_set(GPIO<%= p.port %>, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO_PIN_<%= p.pin %>);
+
+<% }); -%>
+<% } -%>
 }
 
 <% if (hasExti) { %>
@@ -145,6 +162,6 @@ export const README_TEMPLATE = `# MCUCubeMX 生成结果
 ## 引脚配置
 
 <% config.pins.forEach(function(p){ %>
-- <%= p.pin %>: <%= p.mode %> <%= p.label ? '(' + p.label + ')' : '' %>
+- <%= p.pin %>: <%= p.mode %><%= p.function ? ' [' + p.function + ']' : '' %><%= p.label ? '(' + p.label + ')' : '' %>
 <% }); %>
 `

@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
-import type { Conflict, PinAssignment, PinMode, ProjectConfig } from '../types'
+import type { Conflict, PinAssignment, PinGroup, PinMode, ProjectConfig } from '../types'
 import { getDeviceData } from '../data/device'
 import type { DeviceData } from '../data/device'
 import { checkConflicts } from '../lib/conflicts'
+import { colorForGroup } from '../lib/groups'
 
 function newAssignment(mode: PinMode, pin: string): PinAssignment {
   return {
@@ -24,6 +25,7 @@ export const useProjectStore = defineStore('project', {
     projectName: 'untitled',
     prefix: 'MX_',
     assignments: {} as Record<string, PinAssignment>,
+    groups: [] as PinGroup[],
     selectedPin: null as string | null,
     unlocked: [] as string[],
   }),
@@ -46,6 +48,7 @@ export const useProjectStore = defineStore('project', {
         version: 1,
         device: this.deviceId,
         pins: Object.values(this.assignments),
+        groups: this.groups,
         naming: { prefix: this.prefix },
       }
     },
@@ -63,13 +66,19 @@ export const useProjectStore = defineStore('project', {
     selectPin(name: string | null) {
       this.selectedPin = name
     },
-    assign(mode: PinMode, label: string) {
+    assign(mode: PinMode, label: string, func?: string) {
       const pin = this.selectedPin
       if (!pin) return
       const existing = this.assignments[pin]
-      const next: PinAssignment = existing
-        ? { ...existing, mode, label: label.trim() || undefined }
-        : { ...newAssignment(mode, pin), label: label.trim() || undefined }
+      const fn = func?.trim() || undefined
+      const next: PinAssignment = {
+        ...(existing ?? newAssignment(mode, pin)),
+        mode,
+        label: label.trim() || undefined,
+        function: fn,
+      }
+      // 输入/输出模式不携带功能信号
+      if (mode === 'INPUT' || mode === 'OUTPUT') delete next.function
       this.assignments = { ...this.assignments, [pin]: next }
     },
     updateParams(patch: Partial<PinAssignment['params']>) {
@@ -89,7 +98,35 @@ export const useProjectStore = defineStore('project', {
     },
     clearAll() {
       this.assignments = {}
+      this.groups = []
       this.selectedPin = null
+    },
+    addGroup(name: string) {
+      const trimmed = name.trim()
+      if (!trimmed || this.groups.some((g) => g.name === trimmed)) return
+      this.groups = [
+        ...this.groups,
+        { name: trimmed, pins: [], color: colorForGroup(this.groups.length) },
+      ]
+    },
+    renameGroup(oldName: string, newName: string) {
+      const trimmed = newName.trim()
+      if (!trimmed || this.groups.some((g) => g.name === trimmed && g.name !== oldName)) return
+      this.groups = this.groups.map((g) => (g.name === oldName ? { ...g, name: trimmed } : g))
+    },
+    deleteGroup(name: string) {
+      this.groups = this.groups.filter((g) => g.name !== name)
+    },
+    setPinGroup(pin: string, groupName: string | null) {
+      // 单归属：先从所有组移除，再加入目标组
+      this.groups = this.groups.map((g) => ({
+        ...g,
+        pins: g.pins.filter((p) => p !== pin),
+      }))
+      if (!groupName) return
+      this.groups = this.groups.map((g) =>
+        g.name === groupName ? { ...g, pins: [...g.pins, pin] } : g,
+      )
     },
     unlock(name: string) {
       if (!this.unlocked.includes(name)) {
@@ -104,6 +141,11 @@ export const useProjectStore = defineStore('project', {
       for (const assignment of config.pins) {
         this.assignments[assignment.pin] = assignment
       }
+      this.groups = (config.groups ?? []).map((g, i) => ({
+        name: g.name,
+        pins: g.pins,
+        color: g.color ?? colorForGroup(i),
+      }))
       this.prefix = config.naming?.prefix || 'MX_'
     },
     /** 应用嘉立创导入结果：必要时切换器件并整体替换引脚配置 */
