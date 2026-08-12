@@ -17,7 +17,7 @@ import type { ProjectConfig } from './types'
 
 const store = useProjectStore()
 const codegenVisible = ref(false)
-const leftMode = ref<'gpio' | 'clock'>('gpio')
+const viewMode = ref<'gpio' | 'clock'>('gpio')
 const jlcVisible = ref(false)
 const jlcAction = ref<'sync' | 'import' | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -97,6 +97,10 @@ async function clearAll() {
         <span class="badge">{{ store.deviceData.device.package }} · {{ store.deviceData.device.core }}</span>
       </div>
       <div class="toolbar">
+        <el-radio-group v-model="viewMode" size="small" class="view-switch">
+          <el-radio-button value="gpio">GPIO</el-radio-button>
+          <el-radio-button value="clock">时钟</el-radio-button>
+        </el-radio-group>
         <el-input
           v-model="store.projectName"
           size="small"
@@ -129,42 +133,40 @@ async function clearAll() {
       </div>
     </header>
 
-    <main class="app-main">
-      <section class="left">
-        <div class="left-switch">
-          <el-radio-group v-model="leftMode" size="small">
-            <el-radio-button value="gpio">GPIO</el-radio-button>
-            <el-radio-button value="clock">时钟</el-radio-button>
-          </el-radio-group>
-        </div>
-        <PackageView v-if="leftMode === 'gpio'" />
-        <div v-else class="clock-view-wrap">
+    <main class="app-main" :class="{ 'app-main-clock': viewMode === 'clock' }">
+      <template v-if="viewMode === 'gpio'">
+        <section class="left">
+          <PackageView />
+        </section>
+        <section class="right">
+          <div class="panel">
+            <div class="panel-title">
+              引脚列表 <span class="panel-count">{{ store.assignedCount }}/{{ 64 }}</span>
+            </div>
+            <div class="table-wrap">
+              <PinTable />
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">外设使用情况</div>
+            <PeripheralUsagePanel />
+          </div>
+          <div class="panel">
+            <div class="panel-title">引脚分组</div>
+            <GroupsPanel />
+          </div>
+          <div class="panel">
+            <div class="panel-title">引脚配置</div>
+            <PinConfigPanel />
+          </div>
+          <div class="panel">
+            <ConflictsPanel />
+          </div>
+        </section>
+      </template>
+      <section v-else class="clock-page">
+        <div class="clock-page-inner">
           <ClockTreeView />
-        </div>
-      </section>
-      <section class="right">
-        <div class="panel">
-          <div class="panel-title">
-            引脚列表 <span class="panel-count">{{ store.assignedCount }}/{{ 64 }}</span>
-          </div>
-          <div class="table-wrap">
-            <PinTable />
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-title">外设使用情况</div>
-          <PeripheralUsagePanel />
-        </div>
-        <div class="panel">
-          <div class="panel-title">引脚分组</div>
-          <GroupsPanel />
-        </div>
-        <div class="panel">
-          <div class="panel-title">引脚配置</div>
-          <PinConfigPanel />
-        </div>
-        <div class="panel">
-          <ConflictsPanel />
         </div>
       </section>
     </main>
@@ -216,6 +218,9 @@ async function clearAll() {
   align-items: center;
   gap: 8px;
 }
+.view-switch {
+  margin-right: 4px;
+}
 .project-name {
   width: 140px;
 }
@@ -227,18 +232,19 @@ async function clearAll() {
   overflow: auto;
   align-items: start;
 }
+.app-main-clock {
+  display: block;
+}
 .left {
   position: sticky;
   top: 0;
   min-width: 0;
 }
-.left-switch {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 10px;
-}
-.clock-view-wrap {
+.clock-page {
   overflow-x: auto;
+}
+.clock-page-inner {
+  min-width: 920px;
 }
 .right {
   display: flex;
