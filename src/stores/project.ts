@@ -113,6 +113,10 @@ export const useProjectStore = defineStore('project', {
       this.assignments = next
       if (this.selectedPin === name) this.selectedPin = null
     },
+    /** 直接写入指定引脚的完整配置（用于 ADC/EXTI 分配面板） */
+    setPinAssignment(pin: string, assignment: PinAssignment) {
+      this.assignments = { ...this.assignments, [pin]: assignment }
+    },
     clearAll() {
       this.assignments = {}
       this.groups = []
