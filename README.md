@@ -74,6 +74,9 @@
   `usart.h/c`（`MX_USARTx_Init`：波特率/字长/停止位/校验/流控/时钟源）与
   `adc.h/c`（`MX_ADCx_Init`：分辨率/对齐/通道/采样/触发，L23x 单 ADC 与 F4xx ADCx 自动适配 API）、
   `app_it.c`（EXTI 中断骨架，带 USER CODE 区段）、`project.json`、`README.md`，打包 ZIP 下载
+- 生成内容**可按子项选择**：引脚定义（gpio.h）/ 引脚初始化（gpio.c+app_it.c）/
+  时钟定义（clock.h）/ 时钟初始化（clock.c）/ 外设初始化（usart、adc），
+  预览与 ZIP 只包含勾选的文件，README 同步按选择说明
 - 按器件的固件档案自动适配（头文件、速度档位、NVIC 优先级分组、EXTI 边沿枚举）
 - 生成独立 `clock.c`（不改动固件库 system 文件），旧工程配置无时钟字段时自动使用器件默认时钟
 - 本地 `arm-none-eabi-gcc` + 官方固件库编译验证生成代码

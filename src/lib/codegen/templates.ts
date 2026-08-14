@@ -376,34 +376,30 @@ export const README_TEMPLATE = `# MCUCubeMX 生成结果
 
 - gpio.h: 引脚宏定义（按组别分组）与初始化函数声明
 - gpio.c: GPIO 与 EXTI 初始化实现（MX_GPIO_Init / MX_EXTI_Init）
+<% if (withClock) { -%>
 - clock.h / clock.c: 系统时钟树配置（MX_Clock_Init，SYSCLK/AHB/APB1/APB2/ADC）
+<% } -%>
 <% if (hasUsart) { -%>
 - usart.h / usart.c: 串口初始化（MX_USARTx_Init）
 <% } -%>
 <% if (hasAdc) { -%>
 - adc.h / adc.c: ADC 初始化（MX_ADCx_Init）
 <% } -%>
+<% if (hasExti) { -%>
 - app_it.c: EXTI 中断服务函数骨架（仅在启用了外部中断时生成）
+<% } -%>
 - project.json: 本次配置的工程文件，可重新导入 MCUCubeMX
 
 ## 集成步骤
 
-1. 将 gpio.h / gpio.c 加入工程，并把 gpio.c 中的初始化函数在 main 中调用。
-2. 将 clock.h / clock.c 加入工程，并在 main 启动后调用 MX_Clock_Init()
-   覆盖固件库 system 文件中的默认时钟；若固件库 system 文件已在
-   SystemInit 中配置了相同时钟，可跳过调用。
-<% if (hasUsart || hasAdc) { -%>
-3. 将 usart.h/usart.c、adc.h/adc.c 加入工程，并在 main 中调用对应的
-   MX_USARTx_Init() / MX_ADCx_Init()。
+1. 将生成的头文件与源文件加入工程，并在 main 中调用对应的初始化函数
+   （MX_GPIO_Init / MX_Clock_Init / MX_USARTx_Init / MX_ADCx_Init）。
+<% if (withClock) { -%>
+2. 若固件库 system 文件已在 SystemInit 中配置了相同时钟，可跳过调用 MX_Clock_Init()。
 <% } -%>
-<% if (hasUsart || hasAdc) { -%>
-4. 若生成了 app_it.c：如工程已有 gd32l23x_it.c，请删除其中对应的 EXTI
-   handler（EXTI0_IRQHandler、EXTI5_9_IRQHandler、EXTI10_15_IRQHandler 等），
-   再将 app_it.c 加入编译；否则直接加入编译即可。
-5. 在 app_it.c 的 USER CODE 区段内编写实际的中断处理逻辑。
-<% } else { -%>
-3. 若生成了 app_it.c：如工程已有 gd32l23x_it.c，请删除其中对应的 EXTI
-   handler（EXTI0_IRQHandler、EXTI5_9_IRQHandler、EXTI10_15_IRQHandler 等），
+<% if (hasExti) { -%>
+3. 若工程已有 gd32l23x_it.c，请删除其中对应的 EXTI handler
+   （EXTI0_IRQHandler、EXTI5_9_IRQHandler、EXTI10_15_IRQHandler 等），
    再将 app_it.c 加入编译；否则直接加入编译即可。
 4. 在 app_it.c 的 USER CODE 区段内编写实际的中断处理逻辑。
 <% } -%>

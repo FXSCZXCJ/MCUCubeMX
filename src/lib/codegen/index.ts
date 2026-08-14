@@ -24,6 +24,28 @@ import {
   USART_H_TEMPLATE,
 } from './templates'
 
+/** 代码生成子项选择：用户可只生成需要的文件 */
+export interface CodegenSelection {
+  /** 引脚定义（gpio.h 宏） */
+  pinDefs: boolean
+  /** 引脚初始化（gpio.c + EXTI 中断 app_it.c） */
+  pinInit: boolean
+  /** 时钟定义（clock.h） */
+  clockDefs: boolean
+  /** 时钟初始化（clock.c） */
+  clockInit: boolean
+  /** 外设初始化（usart.h/c、adc.h/c） */
+  periphInit: boolean
+}
+
+export const DEFAULT_CODEGEN_SELECTION: CodegenSelection = {
+  pinDefs: true,
+  pinInit: true,
+  clockDefs: true,
+  clockInit: true,
+  periphInit: true,
+}
+
 export function sanitizeLabel(label: string): string {
   const s = label
     .trim()
@@ -425,7 +447,11 @@ function prepare(config: ProjectConfig, deviceData: DeviceData): {
   return { prepared, outputPins, inputPins, afPins, analogPins, extiPins, irqs }
 }
 
-export function generateProject(config: ProjectConfig, deviceData: DeviceData): GeneratedFile[] {
+export function generateProject(
+  config: ProjectConfig,
+  deviceData: DeviceData,
+  selection: CodegenSelection = DEFAULT_CODEGEN_SELECTION,
+): GeneratedFile[] {
   const prefix = config.naming.prefix || 'MX_'
   const { prepared, outputPins, inputPins, afPins, analogPins, extiPins, irqs } = prepare(
     config,
@@ -472,12 +498,15 @@ export function generateProject(config: ProjectConfig, deviceData: DeviceData): 
     nvicGroup: fw.nvic.group,
     prigroupMacro: fw.nvic.groupMacro ?? '',
   }
-  const files: GeneratedFile[] = [
-    {
+  const files: GeneratedFile[] = []
+  if (selection.pinDefs) {
+    files.push({
       path: 'gpio.h',
       content: render(GPIO_H_TEMPLATE, { ...base, groups }),
-    },
-    {
+    })
+  }
+  if (selection.pinInit) {
+    files.push({
       path: 'gpio.c',
       content: render(GPIO_C_TEMPLATE, {
         ...base,
@@ -489,61 +518,68 @@ export function generateProject(config: ProjectConfig, deviceData: DeviceData): 
         extiPins: extiPins.map((p) => ({ ...p, edge: `${fw.extiEdgePrefix}${p.edge}` })),
         irqs,
       }),
-    },
-    {
+    })
+  }
+  if (selection.clockDefs) {
+    files.push({
       path: 'clock.h',
       content: render(CLOCK_H_TEMPLATE, {
         device: config.device,
         includeHeader: fw.header,
         prefix,
       }),
-    },
-    {
+    })
+  }
+  if (selection.clockInit) {
+    files.push({
       path: 'clock.c',
       content: render(CLOCK_C_TEMPLATE, clockCtx),
-    },
-    ...(hasUsart
-      ? [
-          {
-            path: 'usart.h',
-            content: render(USART_H_TEMPLATE, { device: config.device, includeHeader: fw.header, prefix, usarts: usartOut }),
-          },
-          {
-            path: 'usart.c',
-            content: render(USART_C_TEMPLATE, { device: config.device, prefix, usarts: usartOut }),
-          },
-        ]
-      : []),
-    ...(hasAdc
-      ? [
-          {
-            path: 'adc.h',
-            content: render(ADC_H_TEMPLATE, { device: config.device, includeHeader: fw.header, prefix, adcs: adcOut }),
-          },
-          {
-            path: 'adc.c',
-            content: render(ADC_C_TEMPLATE, { device: config.device, prefix, adcs: adcOut }),
-          },
-        ]
-      : []),
-    {
+    })
+  }
+  if (selection.periphInit && hasUsart) {
+    files.push(
+      {
+        path: 'usart.h',
+        content: render(USART_H_TEMPLATE, { device: config.device, includeHeader: fw.header, prefix, usarts: usartOut }),
+      },
+      {
+        path: 'usart.c',
+        content: render(USART_C_TEMPLATE, { device: config.device, prefix, usarts: usartOut }),
+      },
+    )
+  }
+  if (selection.periphInit && hasAdc) {
+    files.push(
+      {
+        path: 'adc.h',
+        content: render(ADC_H_TEMPLATE, { device: config.device, includeHeader: fw.header, prefix, adcs: adcOut }),
+      },
+      {
+        path: 'adc.c',
+        content: render(ADC_C_TEMPLATE, { device: config.device, prefix, adcs: adcOut }),
+      },
+    )
+  }
+  files.push({
       path: 'project.json',
       content: JSON.stringify(config, null, 2) + '\n',
-    },
-    {
+  })
+  files.push({
       path: 'README.md',
       content: render(README_TEMPLATE, {
         device: config.device,
         date: new Date().toISOString(),
         config,
-        hasUsart,
-        hasAdc,
+        withClock: selection.clockDefs || selection.clockInit,
+        hasUsart: hasUsart && selection.periphInit,
+        hasAdc: hasAdc && selection.periphInit,
+        hasExti: hasExti && selection.pinInit,
       }),
-    },
-  ]
+  })
 
-  if (hasExti) {
-    files.splice(2, 0, {
+  if (hasExti && selection.pinInit) {
+    const idx = files.findIndex((f) => f.path === 'gpio.c')
+    files.splice(idx + 1, 0, {
       path: 'app_it.c',
       content: render(APP_IT_C_TEMPLATE, { includeHeader: fw.header, handlers }),
     })
@@ -556,9 +592,13 @@ function render(template: string, data: object): string {
   return compiled(data) as string
 }
 
-export async function exportZip(config: ProjectConfig, deviceData: DeviceData): Promise<Blob> {
+export async function exportZip(
+  config: ProjectConfig,
+  deviceData: DeviceData,
+  selection: CodegenSelection = DEFAULT_CODEGEN_SELECTION,
+): Promise<Blob> {
   const zip = new JSZip()
-  for (const file of generateProject(config, deviceData)) {
+  for (const file of generateProject(config, deviceData, selection)) {
     zip.file(file.path, file.content)
   }
   return zip.generateAsync({ type: 'blob' })
