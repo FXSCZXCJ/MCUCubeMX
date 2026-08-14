@@ -8,6 +8,7 @@ import PeripheralConfigPanel from './components/PeripheralConfigPanel.vue'
 import ConflictsPanel from './components/ConflictsPanel.vue'
 import PeripheralUsagePanel from './components/PeripheralUsagePanel.vue'
 import ExtiAllocationPanel from './components/ExtiAllocationPanel.vue'
+import AdcChannelPanel from './components/AdcChannelPanel.vue'
 import GroupsPanel from './components/GroupsPanel.vue'
 import CollapsiblePanel from './components/CollapsiblePanel.vue'
 import CodegenDialog from './components/CodegenDialog.vue'
@@ -163,6 +164,9 @@ async function clearAll() {
           </CollapsiblePanel>
           <CollapsiblePanel title="中断线分配">
             <ExtiAllocationPanel />
+          </CollapsiblePanel>
+          <CollapsiblePanel title="ADC 通道分配">
+            <AdcChannelPanel />
           </CollapsiblePanel>
           <CollapsiblePanel title="引脚分组">
             <GroupsPanel />
