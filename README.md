@@ -36,9 +36,10 @@
 - 右侧栏「中断线分配」：16 条 EXTI 线全量列表（EXTI0~4 / EXTI5_9 / EXTI10_15 分组），
   显示已分配引脚、标签、触发边沿与空闲状态
 - 右侧栏「ADC 通道分配」：全部 ADC 通道（ADC_IN0~IN15）逐条显示，下拉选择可分配引脚，
-  已使用/未使用颜色区分；选择已占用引脚时弹窗确认，确认后覆盖原配置并支持撤回
+  已使用/未使用颜色区分；选择已占用引脚时弹窗确认，确认后覆盖原配置并支持撤回；
+  下方另列**内部通道**（温度 TEMP / 基准 VREF / VBAT / VSLCD，仅显示）
 - 右侧栏「中断线分配」：16 条 EXTI 线同样支持下拉分配引脚、触发边沿选择、
-  占用确认覆盖与撤回
+  占用确认覆盖与撤回；下方另列**全部 NVIC 内部中断**（TIMER/USART/DMA/ADC/SysTick 等，仅显示）
 - 右侧栏「引脚分组」：按模块自定义分组（单归属、自动配色），封装图按组描边
 
 ### 时钟树配置
@@ -154,6 +155,8 @@ F4xx 编译验证使用仓库自带的 CMSIS 5 内核头（`scripts/firmware/cms
   GD32F4xx 用户手册（PLL PSC/N/P/Q、SYSCLK≤200MHz、APB1≤60MHz、APB2≤120MHz、ADC≤40MHz）
 - `peripherals.json`：外设实例规格（USART 信号前缀/时钟源映射、ADC 分辨率/采样/触发选项），
   按固件库头文件与用户手册转录
+- `interrupts.json`：全部 NVIC 中断向量（由 CMSIS 头文件 IRQn 枚举自动生成，
+  可运行 `node scripts/gen-interrupts.mjs` 重新生成）
 
 `scripts/validate-device-data.mjs` 强制执行一致性校验：引脚唯一连续、每边引脚数、
 AF 表与引脚定义集合一致、EXTI 分组正确、clock.json 档位/范围/宏映射齐全、peripherals.json 结构合法。

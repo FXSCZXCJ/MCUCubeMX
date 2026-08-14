@@ -8,6 +8,7 @@ const store = useProjectStore()
 const overwrite = usePinOverwrite(store)
 
 const channels = computed(() => adcChannels(store.deviceData))
+const adcInternal = computed(() => store.deviceData.peripheralSpec.adcInternal ?? [])
 
 function holderOf(channel: number) {
   const row = channels.value.find((c) => c.channel === channel)
@@ -99,6 +100,14 @@ function onClear(pinName: string) {
         </el-button>
       </span>
     </div>
+
+    <div v-if="adcInternal.length" class="group-head">内部通道（仅显示）</div>
+    <div v-for="ch in adcInternal" :key="ch.channel" class="adc-row internal">
+      <span class="ch-chip internal">ADC_IN{{ ch.channel }}</span>
+      <span class="pin">{{ ch.label }}</span>
+      <span class="fn">{{ ch.note }}</span>
+      <el-tag size="small" type="info" effect="plain">内部</el-tag>
+    </div>
   </div>
 </template>
 
@@ -121,6 +130,14 @@ function onClear(pinName: string) {
   font-size: 12px;
   color: #92400e;
 }
+.group-head {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #6b7280;
+  margin: 10px 0 4px;
+  border-top: 1px dashed #e5e7eb;
+  padding-top: 6px;
+}
 .adc-row {
   display: flex;
   align-items: center;
@@ -132,6 +149,9 @@ function onClear(pinName: string) {
 }
 .adc-row.used {
   background: #f0fdfa;
+}
+.adc-row.internal {
+  opacity: 0.9;
 }
 .ch-chip {
   width: 86px;
@@ -149,6 +169,11 @@ function onClear(pinName: string) {
   color: #0f766e;
   background: #ccfbf1;
   border-color: #5eead4;
+}
+.ch-chip.internal {
+  color: #7c3aed;
+  background: #f5f3ff;
+  border-color: #ddd6fe;
 }
 .pin-info {
   display: flex;

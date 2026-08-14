@@ -9,6 +9,16 @@ const store = useProjectStore()
 const overwrite = usePinOverwrite(store)
 
 const lines = computed(() => extiLines(store.deviceData))
+const coreIrqs = computed(() =>
+  store.deviceData.interrupts.filter((i) => i.number < 0).sort((a, b) => a.number - b.number),
+)
+const periphIrqs = computed(() =>
+  store.deviceData.interrupts.filter((i) => i.number >= 0).sort((a, b) => a.number - b.number),
+)
+
+function irqName(name: string): string {
+  return name.replace(/_IRQn$/, '')
+}
 
 const EDGE_LABELS: Record<ExtiEdge, string> = {
   RISING: '上升沿',
@@ -126,6 +136,27 @@ function onEdgeChange(pinName: string, edge: ExtiEdge) {
         </template>
       </div>
     </template>
+
+    <div class="group-head">内部中断（仅显示）</div>
+    <div class="irq-wrap">
+      <span
+        v-for="irq in coreIrqs"
+        :key="irq.name"
+        class="irq-chip core"
+        :title="irq.comment || irq.name"
+      >
+        {{ irqName(irq.name) }}
+      </span>
+      <span
+        v-for="irq in periphIrqs"
+        :key="irq.name"
+        class="irq-chip"
+        :title="irq.comment || irq.name"
+      >
+        {{ irqName(irq.name) }}
+      </span>
+    </div>
+    <div class="hint">上方 EXTI0~15 可分配引脚；内部中断仅作参考，配置见后续外设/中断管理。</div>
   </div>
 </template>
 
@@ -160,6 +191,31 @@ function onEdgeChange(pinName: string, edge: ExtiEdge) {
   border-top: none;
   margin-top: 0;
   padding-top: 0;
+}
+.irq-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+.irq-chip {
+  font-size: 11px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 5px;
+  padding: 1px 7px;
+  cursor: help;
+}
+.irq-chip.core {
+  color: #6b7280;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+.hint {
+  font-size: 11.5px;
+  color: #9ca3af;
+  margin-top: 8px;
 }
 .exti-row {
   display: flex;

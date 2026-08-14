@@ -155,6 +155,14 @@ export interface PeripheralSpec {
   source: string
   usart: UsartPeriphSpec[]
   adc: AdcPeriphSpec[]
+  /** ADC 内部通道（温度/基准/VBAT 等，仅展示） */
+  adcInternal?: { channel: number; label: string; note?: string }[]
+}
+
+export interface DeviceInterrupt {
+  name: string
+  number: number
+  comment?: string
 }
 
 /* ==================== 时钟树（Phase 2） ==================== */

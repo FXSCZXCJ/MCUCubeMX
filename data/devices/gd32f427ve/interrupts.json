@@ -1,0 +1,451 @@
+{
+  "device": "GD32F427VE",
+  "source": "GD32F4xx CMSIS gd32f4xx.h IRQn_Type（GD32F427 分支）",
+  "irqs": [
+    {
+      "name": "NonMaskableInt_IRQn",
+      "number": -14,
+      "comment": ""
+    },
+    {
+      "name": "MemoryManagement_IRQn",
+      "number": -12,
+      "comment": ""
+    },
+    {
+      "name": "BusFault_IRQn",
+      "number": -11,
+      "comment": ""
+    },
+    {
+      "name": "UsageFault_IRQn",
+      "number": -10,
+      "comment": ""
+    },
+    {
+      "name": "SVCall_IRQn",
+      "number": -5,
+      "comment": ""
+    },
+    {
+      "name": "DebugMonitor_IRQn",
+      "number": -4,
+      "comment": ""
+    },
+    {
+      "name": "PendSV_IRQn",
+      "number": -2,
+      "comment": ""
+    },
+    {
+      "name": "SysTick_IRQn",
+      "number": -1,
+      "comment": ""
+    },
+    {
+      "name": "WWDGT_IRQn",
+      "number": 0,
+      "comment": ""
+    },
+    {
+      "name": "LVD_IRQn",
+      "number": 1,
+      "comment": ""
+    },
+    {
+      "name": "TAMPER_STAMP_IRQn",
+      "number": 2,
+      "comment": ""
+    },
+    {
+      "name": "RTC_WKUP_IRQn",
+      "number": 3,
+      "comment": ""
+    },
+    {
+      "name": "FMC_IRQn",
+      "number": 4,
+      "comment": ""
+    },
+    {
+      "name": "RCU_CTC_IRQn",
+      "number": 5,
+      "comment": ""
+    },
+    {
+      "name": "EXTI0_IRQn",
+      "number": 6,
+      "comment": ""
+    },
+    {
+      "name": "EXTI1_IRQn",
+      "number": 7,
+      "comment": ""
+    },
+    {
+      "name": "EXTI2_IRQn",
+      "number": 8,
+      "comment": ""
+    },
+    {
+      "name": "EXTI3_IRQn",
+      "number": 9,
+      "comment": ""
+    },
+    {
+      "name": "EXTI4_IRQn",
+      "number": 10,
+      "comment": ""
+    },
+    {
+      "name": "DMA0_Channel0_IRQn",
+      "number": 11,
+      "comment": ""
+    },
+    {
+      "name": "DMA0_Channel1_IRQn",
+      "number": 12,
+      "comment": ""
+    },
+    {
+      "name": "DMA0_Channel2_IRQn",
+      "number": 13,
+      "comment": ""
+    },
+    {
+      "name": "DMA0_Channel3_IRQn",
+      "number": 14,
+      "comment": ""
+    },
+    {
+      "name": "DMA0_Channel4_IRQn",
+      "number": 15,
+      "comment": ""
+    },
+    {
+      "name": "DMA0_Channel5_IRQn",
+      "number": 16,
+      "comment": ""
+    },
+    {
+      "name": "DMA0_Channel6_IRQn",
+      "number": 17,
+      "comment": ""
+    },
+    {
+      "name": "ADC_IRQn",
+      "number": 18,
+      "comment": ""
+    },
+    {
+      "name": "CAN0_TX_IRQn",
+      "number": 19,
+      "comment": ""
+    },
+    {
+      "name": "CAN0_RX0_IRQn",
+      "number": 20,
+      "comment": ""
+    },
+    {
+      "name": "CAN0_RX1_IRQn",
+      "number": 21,
+      "comment": ""
+    },
+    {
+      "name": "CAN0_EWMC_IRQn",
+      "number": 22,
+      "comment": ""
+    },
+    {
+      "name": "EXTI5_9_IRQn",
+      "number": 23,
+      "comment": ""
+    },
+    {
+      "name": "TIMER0_BRK_TIMER8_IRQn",
+      "number": 24,
+      "comment": ""
+    },
+    {
+      "name": "TIMER0_UP_TIMER9_IRQn",
+      "number": 25,
+      "comment": ""
+    },
+    {
+      "name": "TIMER0_TRG_CMT_TIMER10_IRQn",
+      "number": 26,
+      "comment": ""
+    },
+    {
+      "name": "TIMER0_Channel_IRQn",
+      "number": 27,
+      "comment": ""
+    },
+    {
+      "name": "TIMER1_IRQn",
+      "number": 28,
+      "comment": ""
+    },
+    {
+      "name": "TIMER2_IRQn",
+      "number": 29,
+      "comment": ""
+    },
+    {
+      "name": "TIMER3_IRQn",
+      "number": 30,
+      "comment": ""
+    },
+    {
+      "name": "I2C0_EV_IRQn",
+      "number": 31,
+      "comment": ""
+    },
+    {
+      "name": "I2C0_ER_IRQn",
+      "number": 32,
+      "comment": ""
+    },
+    {
+      "name": "I2C1_EV_IRQn",
+      "number": 33,
+      "comment": ""
+    },
+    {
+      "name": "I2C1_ER_IRQn",
+      "number": 34,
+      "comment": ""
+    },
+    {
+      "name": "SPI0_IRQn",
+      "number": 35,
+      "comment": ""
+    },
+    {
+      "name": "SPI1_IRQn",
+      "number": 36,
+      "comment": ""
+    },
+    {
+      "name": "USART0_IRQn",
+      "number": 37,
+      "comment": ""
+    },
+    {
+      "name": "USART1_IRQn",
+      "number": 38,
+      "comment": ""
+    },
+    {
+      "name": "USART2_IRQn",
+      "number": 39,
+      "comment": ""
+    },
+    {
+      "name": "EXTI10_15_IRQn",
+      "number": 40,
+      "comment": ""
+    },
+    {
+      "name": "RTC_Alarm_IRQn",
+      "number": 41,
+      "comment": ""
+    },
+    {
+      "name": "USBFS_WKUP_IRQn",
+      "number": 42,
+      "comment": ""
+    },
+    {
+      "name": "TIMER7_BRK_TIMER11_IRQn",
+      "number": 43,
+      "comment": ""
+    },
+    {
+      "name": "TIMER7_UP_TIMER12_IRQn",
+      "number": 44,
+      "comment": ""
+    },
+    {
+      "name": "TIMER7_TRG_CMT_TIMER13_IRQn",
+      "number": 45,
+      "comment": ""
+    },
+    {
+      "name": "TIMER7_Channel_IRQn",
+      "number": 46,
+      "comment": ""
+    },
+    {
+      "name": "DMA0_Channel7_IRQn",
+      "number": 47,
+      "comment": ""
+    },
+    {
+      "name": "EXMC_IRQn",
+      "number": 48,
+      "comment": ""
+    },
+    {
+      "name": "SDIO_IRQn",
+      "number": 49,
+      "comment": ""
+    },
+    {
+      "name": "TIMER4_IRQn",
+      "number": 50,
+      "comment": ""
+    },
+    {
+      "name": "SPI2_IRQn",
+      "number": 51,
+      "comment": ""
+    },
+    {
+      "name": "UART3_IRQn",
+      "number": 52,
+      "comment": ""
+    },
+    {
+      "name": "UART4_IRQn",
+      "number": 53,
+      "comment": ""
+    },
+    {
+      "name": "TIMER5_DAC_IRQn",
+      "number": 54,
+      "comment": ""
+    },
+    {
+      "name": "TIMER6_IRQn",
+      "number": 55,
+      "comment": ""
+    },
+    {
+      "name": "DMA1_Channel0_IRQn",
+      "number": 56,
+      "comment": ""
+    },
+    {
+      "name": "DMA1_Channel1_IRQn",
+      "number": 57,
+      "comment": ""
+    },
+    {
+      "name": "DMA1_Channel2_IRQn",
+      "number": 58,
+      "comment": ""
+    },
+    {
+      "name": "DMA1_Channel3_IRQn",
+      "number": 59,
+      "comment": ""
+    },
+    {
+      "name": "DMA1_Channel4_IRQn",
+      "number": 60,
+      "comment": ""
+    },
+    {
+      "name": "ENET_IRQn",
+      "number": 61,
+      "comment": ""
+    },
+    {
+      "name": "ENET_WKUP_IRQn",
+      "number": 62,
+      "comment": ""
+    },
+    {
+      "name": "CAN1_TX_IRQn",
+      "number": 63,
+      "comment": ""
+    },
+    {
+      "name": "CAN1_RX0_IRQn",
+      "number": 64,
+      "comment": ""
+    },
+    {
+      "name": "CAN1_RX1_IRQn",
+      "number": 65,
+      "comment": ""
+    },
+    {
+      "name": "CAN1_EWMC_IRQn",
+      "number": 66,
+      "comment": ""
+    },
+    {
+      "name": "USBFS_IRQn",
+      "number": 67,
+      "comment": ""
+    },
+    {
+      "name": "DMA1_Channel5_IRQn",
+      "number": 68,
+      "comment": ""
+    },
+    {
+      "name": "DMA1_Channel6_IRQn",
+      "number": 69,
+      "comment": ""
+    },
+    {
+      "name": "DMA1_Channel7_IRQn",
+      "number": 70,
+      "comment": ""
+    },
+    {
+      "name": "USART5_IRQn",
+      "number": 71,
+      "comment": ""
+    },
+    {
+      "name": "I2C2_EV_IRQn",
+      "number": 72,
+      "comment": ""
+    },
+    {
+      "name": "I2C2_ER_IRQn",
+      "number": 73,
+      "comment": ""
+    },
+    {
+      "name": "USBHS_EP1_Out_IRQn",
+      "number": 74,
+      "comment": ""
+    },
+    {
+      "name": "USBHS_EP1_In_IRQn",
+      "number": 75,
+      "comment": ""
+    },
+    {
+      "name": "USBHS_WKUP_IRQn",
+      "number": 76,
+      "comment": ""
+    },
+    {
+      "name": "USBHS_IRQn",
+      "number": 77,
+      "comment": ""
+    },
+    {
+      "name": "DCI_IRQn",
+      "number": 78,
+      "comment": ""
+    },
+    {
+      "name": "TRNG_IRQn",
+      "number": 80,
+      "comment": ""
+    },
+    {
+      "name": "FPU_IRQn",
+      "number": 81,
+      "comment": ""
+    }
+  ]
+}

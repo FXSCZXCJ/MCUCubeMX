@@ -56,5 +56,22 @@ for (const id of deviceIds) {
       expect(fw.define).toBeTruthy()
       expect(fw.extiEdgePrefix).toMatch(/^EXTI_/)
     })
+
+    it('中断向量表完整且编号唯一', () => {
+      const irqs = dd.interrupts
+      expect(irqs.length).toBeGreaterThan(0)
+      const names = new Set(irqs.map((i) => i.name))
+      const numbers = new Set(irqs.map((i) => i.number))
+      expect(names.size).toBe(irqs.length)
+      expect(numbers.size).toBe(irqs.length)
+      expect(irqs.every((i) => Number.isInteger(i.number))).toBe(true)
+    })
+
+    it('ADC 内部通道数据非空且通道唯一', () => {
+      const internal = dd.peripheralSpec.adcInternal ?? []
+      expect(internal.length).toBeGreaterThan(0)
+      expect(new Set(internal.map((c) => c.channel)).size).toBe(internal.length)
+      expect(internal.every((c) => c.label.length > 0)).toBe(true)
+    })
   })
 }

@@ -94,5 +94,11 @@
         "externalTrigger": "ADC_EXTTRIG_ROUTINE_NONE"
       }
     }
+  ],
+  "adcInternal": [
+    { "channel": 16, "label": "温度传感器 TEMP", "note": "ADC_IN16" },
+    { "channel": 17, "label": "内部基准电压 VREF", "note": "ADC_IN17" },
+    { "channel": 18, "label": "电池电压 VBAT/3", "note": "ADC_IN18" },
+    { "channel": 19, "label": "VSLCD 电压", "note": "ADC_IN19" }
   ]
 }

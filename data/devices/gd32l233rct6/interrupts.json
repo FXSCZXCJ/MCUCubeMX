@@ -1,0 +1,321 @@
+{
+  "device": "GD32L233RCT6",
+  "source": "GD32L23x CMSIS gd32l23x.h IRQn_Type（GD32L233 分支）",
+  "irqs": [
+    {
+      "name": "NonMaskableInt_IRQn",
+      "number": -14,
+      "comment": ""
+    },
+    {
+      "name": "HardFault_IRQn",
+      "number": -13,
+      "comment": ""
+    },
+    {
+      "name": "SVCall_IRQn",
+      "number": -5,
+      "comment": ""
+    },
+    {
+      "name": "PendSV_IRQn",
+      "number": -2,
+      "comment": ""
+    },
+    {
+      "name": "SysTick_IRQn",
+      "number": -1,
+      "comment": ""
+    },
+    {
+      "name": "WWDGT_IRQn",
+      "number": 0,
+      "comment": ""
+    },
+    {
+      "name": "LVD_IRQn",
+      "number": 1,
+      "comment": ""
+    },
+    {
+      "name": "TAMPER_STAMP_IRQn",
+      "number": 2,
+      "comment": ""
+    },
+    {
+      "name": "RTC_WKUP_IRQn",
+      "number": 3,
+      "comment": ""
+    },
+    {
+      "name": "FMC_IRQn",
+      "number": 4,
+      "comment": ""
+    },
+    {
+      "name": "RCU_CTC_IRQn",
+      "number": 5,
+      "comment": ""
+    },
+    {
+      "name": "EXTI0_IRQn",
+      "number": 6,
+      "comment": ""
+    },
+    {
+      "name": "EXTI1_IRQn",
+      "number": 7,
+      "comment": ""
+    },
+    {
+      "name": "EXTI2_IRQn",
+      "number": 8,
+      "comment": ""
+    },
+    {
+      "name": "EXTI3_IRQn",
+      "number": 9,
+      "comment": ""
+    },
+    {
+      "name": "EXTI4_IRQn",
+      "number": 10,
+      "comment": ""
+    },
+    {
+      "name": "DMA_Channel0_IRQn",
+      "number": 11,
+      "comment": ""
+    },
+    {
+      "name": "DMA_Channel1_IRQn",
+      "number": 12,
+      "comment": ""
+    },
+    {
+      "name": "DMA_Channel2_IRQn",
+      "number": 13,
+      "comment": ""
+    },
+    {
+      "name": "DMA_Channel3_IRQn",
+      "number": 14,
+      "comment": ""
+    },
+    {
+      "name": "DMA_Channel4_IRQn",
+      "number": 15,
+      "comment": ""
+    },
+    {
+      "name": "DMA_Channel5_IRQn",
+      "number": 16,
+      "comment": ""
+    },
+    {
+      "name": "DMA_Channel6_IRQn",
+      "number": 17,
+      "comment": ""
+    },
+    {
+      "name": "ADC_IRQn",
+      "number": 18,
+      "comment": ""
+    },
+    {
+      "name": "USBD_HP_IRQn",
+      "number": 19,
+      "comment": ""
+    },
+    {
+      "name": "USBD_LP_IRQn",
+      "number": 20,
+      "comment": ""
+    },
+    {
+      "name": "TIMER1_IRQn",
+      "number": 21,
+      "comment": ""
+    },
+    {
+      "name": "TIMER2_IRQn",
+      "number": 22,
+      "comment": ""
+    },
+    {
+      "name": "TIMER8_IRQn",
+      "number": 23,
+      "comment": ""
+    },
+    {
+      "name": "TIMER11_IRQn",
+      "number": 24,
+      "comment": ""
+    },
+    {
+      "name": "TIMER5_IRQn",
+      "number": 25,
+      "comment": ""
+    },
+    {
+      "name": "TIMER6_IRQn",
+      "number": 26,
+      "comment": ""
+    },
+    {
+      "name": "USART0_IRQn",
+      "number": 27,
+      "comment": ""
+    },
+    {
+      "name": "USART1_IRQn",
+      "number": 28,
+      "comment": ""
+    },
+    {
+      "name": "UART3_IRQn",
+      "number": 29,
+      "comment": ""
+    },
+    {
+      "name": "UART4_IRQn",
+      "number": 30,
+      "comment": ""
+    },
+    {
+      "name": "I2C0_EV_IRQn",
+      "number": 31,
+      "comment": ""
+    },
+    {
+      "name": "I2C0_ER_IRQn",
+      "number": 32,
+      "comment": ""
+    },
+    {
+      "name": "I2C1_EV_IRQn",
+      "number": 33,
+      "comment": ""
+    },
+    {
+      "name": "I2C1_ER_IRQn",
+      "number": 34,
+      "comment": ""
+    },
+    {
+      "name": "SPI0_IRQn",
+      "number": 35,
+      "comment": ""
+    },
+    {
+      "name": "SPI1_IRQn",
+      "number": 36,
+      "comment": ""
+    },
+    {
+      "name": "DAC_IRQn",
+      "number": 37,
+      "comment": ""
+    },
+    {
+      "name": "I2C2_EV_IRQn",
+      "number": 39,
+      "comment": ""
+    },
+    {
+      "name": "I2C2_ER_IRQn",
+      "number": 40,
+      "comment": ""
+    },
+    {
+      "name": "RTC_Alarm_IRQn",
+      "number": 41,
+      "comment": ""
+    },
+    {
+      "name": "USBD_WKUP_IRQn",
+      "number": 42,
+      "comment": ""
+    },
+    {
+      "name": "EXTI5_9_IRQn",
+      "number": 43,
+      "comment": ""
+    },
+    {
+      "name": "EXTI10_15_IRQn",
+      "number": 47,
+      "comment": ""
+    },
+    {
+      "name": "DMAMUX_IRQn",
+      "number": 55,
+      "comment": ""
+    },
+    {
+      "name": "CMP0_IRQn",
+      "number": 56,
+      "comment": ""
+    },
+    {
+      "name": "CMP1_IRQn",
+      "number": 57,
+      "comment": ""
+    },
+    {
+      "name": "I2C0_WKUP_IRQn",
+      "number": 58,
+      "comment": ""
+    },
+    {
+      "name": "I2C2_WKUP_IRQn",
+      "number": 59,
+      "comment": ""
+    },
+    {
+      "name": "USART0_WKUP_IRQn",
+      "number": 60,
+      "comment": ""
+    },
+    {
+      "name": "LPUART_IRQn",
+      "number": 61,
+      "comment": ""
+    },
+    {
+      "name": "CAU_IRQn",
+      "number": 62,
+      "comment": ""
+    },
+    {
+      "name": "TRNG_IRQn",
+      "number": 63,
+      "comment": ""
+    },
+    {
+      "name": "SLCD_IRQn",
+      "number": 64,
+      "comment": ""
+    },
+    {
+      "name": "USART1_WKUP_IRQn",
+      "number": 65,
+      "comment": ""
+    },
+    {
+      "name": "I2C1_WKUP_IRQn",
+      "number": 66,
+      "comment": ""
+    },
+    {
+      "name": "LPUART_WKUP_IRQn",
+      "number": 67,
+      "comment": ""
+    },
+    {
+      "name": "LPTIMER_IRQn",
+      "number": 68,
+      "comment": ""
+    }
+  ]
+}

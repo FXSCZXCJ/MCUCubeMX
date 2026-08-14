@@ -18,6 +18,7 @@ for (const dev of devices) {
   const exti = read('exti.json')
   const clock = read('clock.json')
   const periph = read('peripherals.json')
+  const interrupts = read('interrupts.json')
   const fail = (msg) => errors.push(`[${dev}] ${msg}`)
   const pins = pkg.pins
   const pinsPerSide = pkg.pinsPerSide
@@ -94,6 +95,7 @@ for (const dev of devices) {
     validateClockData(clock, fail)
   }
   validatePeripheralData(periph, fail)
+  validateInterruptsData(interrupts, pkg.device, fail)
 }
 
 function validatePeripheralData(periph, fail) {
@@ -139,6 +141,41 @@ function validatePeripheralData(periph, fail) {
     if (!d || ![d.resolution, d.dataAlignment, d.sampleTime, d.externalTrigger].every(Boolean)) {
       fail(`${a.id} defaults 不完整`)
     }
+  }
+  if (periph.adcInternal !== undefined) {
+    if (!Array.isArray(periph.adcInternal) || periph.adcInternal.length === 0) {
+      fail('peripherals.adcInternal 不能为空')
+    } else {
+      const seen = new Set()
+      for (const c of periph.adcInternal) {
+        if (!Number.isInteger(c.channel) || !c.label) {
+          fail(`peripherals.adcInternal 条目非法: ${JSON.stringify(c)}`)
+          continue
+        }
+        if (seen.has(c.channel)) fail(`peripherals.adcInternal 重复通道 ${c.channel}`)
+        seen.add(c.channel)
+      }
+    }
+  }
+}
+
+function validateInterruptsData(interrupts, device, fail) {
+  if (!interrupts || typeof interrupts !== 'object') return fail('缺少 interrupts.json')
+  if (interrupts.device !== device) fail(`interrupts.device 应为 ${device}`)
+  if (!Array.isArray(interrupts.irqs) || interrupts.irqs.length === 0) {
+    return fail('interrupts.irqs 不能为空')
+  }
+  const names = new Set()
+  const numbers = new Set()
+  for (const irq of interrupts.irqs) {
+    if (!irq.name || typeof irq.name !== 'string' || !Number.isInteger(irq.number)) {
+      fail(`interrupts.irqs 条目非法: ${JSON.stringify(irq)}`)
+      continue
+    }
+    if (names.has(irq.name)) fail(`interrupts.irqs 重复名称 ${irq.name}`)
+    if (numbers.has(irq.number)) fail(`interrupts.irqs 重复编号 ${irq.number}`)
+    names.add(irq.name)
+    numbers.add(irq.number)
   }
 }
 
@@ -346,7 +383,8 @@ for (const dev of devices) {
   const pkg = JSON.parse(readFileSync(path.join(devicesDir, dev, 'package.json'), 'utf8'))
   const af = JSON.parse(readFileSync(path.join(devicesDir, dev, 'af.json'), 'utf8'))
   const exti = JSON.parse(readFileSync(path.join(devicesDir, dev, 'exti.json'), 'utf8'))
+  const interrupts = JSON.parse(readFileSync(path.join(devicesDir, dev, 'interrupts.json'), 'utf8'))
   console.log(
-    `OK: ${pkg.device} ${pkg.package} | ${pkg.pins.length} pins | ${af.entries.length} AF entries | ${exti.entries.length} EXTI entries | clock 源=${JSON.parse(readFileSync(path.join(devicesDir, dev, 'clock.json'), 'utf8')).sources.length} | periph usart/adc=${JSON.parse(readFileSync(path.join(devicesDir, dev, 'peripherals.json'), 'utf8')).usart.length}/${JSON.parse(readFileSync(path.join(devicesDir, dev, 'peripherals.json'), 'utf8')).adc.length}`,
+    `OK: ${pkg.device} ${pkg.package} | ${pkg.pins.length} pins | ${af.entries.length} AF | ${exti.entries.length} EXTI | clock 源=${JSON.parse(readFileSync(path.join(devicesDir, dev, 'clock.json'), 'utf8')).sources.length} | periph u/a=${JSON.parse(readFileSync(path.join(devicesDir, dev, 'peripherals.json'), 'utf8')).usart.length}/${JSON.parse(readFileSync(path.join(devicesDir, dev, 'peripherals.json'), 'utf8')).adc.length} | IRQs=${interrupts.irqs.length}`,
   )
 }
